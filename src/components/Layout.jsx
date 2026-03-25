@@ -42,8 +42,8 @@ export default function Layout() {
               <Shield className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-serif text-lg font-semibold text-white">LexPro</h1>
-              <p className="text-xs text-sidebar-foreground/60">Gestión Jurídica</p>
+            <h1 className="font-serif text-lg font-semibold text-white">Pérez & Funes</h1>
+            <p className="text-xs text-sidebar-foreground/60">Estudio Jurídico · Negocios Inmobiliarios</p>
             </div>
           </div>
         </div>
