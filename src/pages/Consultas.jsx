@@ -442,7 +442,18 @@ export default function Consultas() {
               </div>
               <div className="grid gap-2">
                 <Label>Gastos estimados ($)</Label>
-                <Input type="number" min="0" placeholder="Sellados, tasas, gastos judiciales..." value={form.gastos_estimados} onChange={e => setForm({ ...form, gastos_estimados: e.target.value })} />
+                <Input type="number" min="0" step="1" placeholder="Sellados, tasas, gastos judiciales..." value={form.gastos_estimados} onChange={e => setForm({ ...form, gastos_estimados: Math.round(parseFloat(e.target.value) || 0).toString() })} />
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + 20000) })} className="h-auto py-1.5">
+                    <span className="text-center"><div className="font-medium">Inicio Causa</div><div className="text-muted-foreground">$20.000</div></span>
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + 70000) })} className="h-auto py-1.5">
+                    <span className="text-center"><div className="font-medium">Desarchivo</div><div className="text-muted-foreground">$70.000</div></span>
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + 8000) })} className="h-auto py-1.5">
+                    <span className="text-center"><div className="font-medium">Aporte Colegio</div><div className="text-muted-foreground">$8.000</div></span>
+                  </Button>
+                </div>
               </div>
               {(form.presupuesto_pesos || form.gastos_estimados) && (
                 <div className="p-4 rounded-lg bg-accent/10 border border-accent/20 space-y-1">
