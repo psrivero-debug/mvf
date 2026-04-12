@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search, ClipboardList, User, Calendar, Pencil, Trash2, Calculator, UserPlus } from "lucide-react";
+import { Plus, Search, ClipboardList, User, Calendar, Pencil, Trash2, Calculator, UserPlus, Printer } from "lucide-react";
 import AudioTranscriber from "../components/AudioTranscriber";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -92,6 +92,11 @@ export default function Consultas() {
     queryFn: () => base44.entities.IusTarifa.list("concepto"),
   });
 
+  const saveBudgetMutation = useMutation({
+    mutationFn: (data) => base44.entities.Presupuesto.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presupuestos"] }),
+  });
+
   const valorBase = configs[0]?.valor_base || 0;
 
   const createClientMutation = useMutation({
@@ -156,6 +161,54 @@ export default function Consultas() {
       presupuesto_ius: val,
       presupuesto_pesos: val && valorBase ? String(parseFloat(val) * valorBase) : prev.presupuesto_pesos,
     }));
+  };
+
+  const handlePrintBudget = () => {
+    const montoLista = parseFloat(form.presupuesto_pesos) || 0;
+    const montoContado = Math.round(montoLista * 0.85);
+    const cuota3 = Math.round(montoLista / 3);
+    const cuota6 = Math.round(montoLista / 6);
+    const hoy = new Date();
+    const vencimiento = new Date(hoy.getTime() + 10 * 24 * 60 * 60 * 1000);
+    
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px;margin:0 0 10px}p{margin:5px 0}.header{border-bottom:3px solid #1e3a5f;padding-bottom:20px;margin-bottom:30px}.client{font-weight:bold;font-size:18px;margin:20px 0}.table{width:100%;border-collapse:collapse;margin:30px 0}.table th{background:#f0f0f0;padding:10px;text-align:left;border-bottom:2px solid #1e3a5f}.table td{padding:10px;border-bottom:1px solid #ddd}.amount{text-align:right;font-weight:bold}.footer{margin-top:40px;font-size:12px;color:#666;border-top:1px solid #ddd;padding-top:20px}</style>
+    </head><body>
+    <div class="header"><h1>PRESUPUESTO</h1>
+    <p><strong>Pérez & Funes - Estudio Jurídico</strong></p>
+    <p>Fecha: ${hoy.toLocaleDateString('es-AR')}</p>
+    <p>Válido hasta: ${vencimiento.toLocaleDateString('es-AR')} (10 días)</p></div>
+    <div class="client">Cliente: ${form.client_name}</div>
+    <table class="table"><tr><th>Concepto</th><th class="amount">Monto</th></tr>
+    <tr><td>${form.resumen || 'Servicios profesionales'}</td><td class="amount">$${montoLista.toLocaleString('es-AR')}</td></tr>
+    </table>
+    <table class="table"><tr><th>Opción de pago</th><th class="amount">Monto</th></tr>
+    <tr><td><strong>Contado (15% desc.)</strong></td><td class="amount">$${montoContado.toLocaleString('es-AR')}</td></tr>
+    <tr><td><strong>3 cuotas</strong></td><td class="amount">$${cuota3.toLocaleString('es-AR')} c/u</td></tr>
+    <tr><td><strong>6 cuotas</strong></td><td class="amount">$${cuota6.toLocaleString('es-AR')} c/u</td></tr>
+    </table>
+    <div class="footer"><p>Este presupuesto es válido por 10 días corridos desde su emisión.</p>
+    <p>Para aceptar, por favor comuníquese con nuestro estudio.</p></div>
+    </body></html>`;
+    
+    saveBudgetMutation.mutate({
+      client_id: form.client_id,
+      client_name: form.client_name,
+      consulta_id: editing?.id || "",
+      fecha_emision: new Date().toISOString().split('T')[0],
+      fecha_vencimiento: vencimiento.toISOString().split('T')[0],
+      concepto: form.resumen || 'Servicios profesionales',
+      monto_lista: montoLista,
+      monto_contado: montoContado,
+      cuotas_3: cuota3,
+      cuotas_6: cuota6,
+      html_content: html,
+    });
+    
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    w.print();
   };
 
   return (
@@ -600,6 +653,11 @@ export default function Consultas() {
                   <Input type="number" min="0" step="1" placeholder="Ingresar monto" className="text-xs" onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) { setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + val) }); e.target.value = ""; } }} />
                 </div>
               </div>
+              {form.presupuesto_pesos && form.client_id && (
+                <Button onClick={handlePrintBudget} className="gap-2 w-full" disabled={saveBudgetMutation.isPending}>
+                  <Printer className="w-4 h-4" /> {saveBudgetMutation.isPending ? 'Guardando...' : 'Imprimir y guardar presupuesto'}
+                </Button>
+              )}
               {(form.presupuesto_pesos || form.gastos_estimados) && (
                 <div className="p-4 rounded-lg bg-accent/10 border border-accent/20 space-y-1">
                   <p className="text-sm font-medium">Resumen del presupuesto</p>

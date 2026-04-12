@@ -1,0 +1,70 @@
+{
+  "name": "Presupuesto",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string",
+      "description": "N\u00famero de presupuesto"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente"
+    },
+    "consulta_id": {
+      "type": "string",
+      "description": "ID de la consulta asociada"
+    },
+    "fecha_emision": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de emisi\u00f3n"
+    },
+    "fecha_vencimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de vencimiento (10 d\u00edas)"
+    },
+    "concepto": {
+      "type": "string",
+      "description": "Descripci\u00f3n del servicio/concepto"
+    },
+    "monto_lista": {
+      "type": "number",
+      "description": "Monto de lista (sin descuento)"
+    },
+    "monto_contado": {
+      "type": "number",
+      "description": "Monto contado con 15% descuento"
+    },
+    "cuotas_3": {
+      "type": "number",
+      "description": "Valor de cuota a 3 meses"
+    },
+    "cuotas_6": {
+      "type": "number",
+      "description": "Valor de cuota a 6 meses"
+    },
+    "html_content": {
+      "type": "string",
+      "description": "Contenido HTML del presupuesto"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "vigente",
+        "vencido",
+        "aceptado"
+      ],
+      "default": "vigente"
+    }
+  },
+  "required": [
+    "client_id",
+    "client_name",
+    "fecha_emision"
+  ]
+}
