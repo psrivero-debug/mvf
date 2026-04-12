@@ -532,7 +532,7 @@ export default function Consultas() {
                     {tarifas.filter(t => t.activo && (tarифаSearch === "" || t.concepto.toLowerCase().includes(tarифаSearch.toLowerCase()) || t.descripcion?.toLowerCase().includes(tarифаSearch.toLowerCase())) && (tarifaCategoryFilter === "all" || t.categoria === tarifaCategoryFilter)).map(t => {
                       const isSelected = selectedTarifas.has(t.id);
                       return (
-                     <div key={t.id} className="px-3 py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm">
+                     <div key={t.id} className={`px-3 py-2 transition-colors flex items-center gap-2 text-sm rounded ${isSelected ? 'bg-primary/10 border-l-4 border-primary font-semibold' : 'hover:bg-accent/50'}`}>
                        <input
                          type="checkbox"
                          checked={isSelected}
