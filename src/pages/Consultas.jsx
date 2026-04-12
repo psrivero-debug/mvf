@@ -114,6 +114,8 @@ export default function Consultas() {
 
   const openEdit = (c) => { setEditing(c); setForm({ ...emptyConsulta, ...c }); setTab("datos"); setDialogOpen(true); };
 
+  const openNewWithIUS = () => { setForm({ ...emptyConsulta, presupuesto_ius: valorBase > 0 ? "1" : "", presupuesto_pesos: valorBase > 0 ? valorBase.toString() : "" }); setEditing(null); setTab("datos"); setDialogOpen(true); };
+
   const handleSubmit = () => {
     const selectedClient = clients.find(c => c.id === form.client_id);
     const data = {
@@ -153,7 +155,7 @@ export default function Consultas() {
           <h1 className="text-2xl lg:text-3xl font-serif font-bold">Consultas</h1>
           <p className="text-muted-foreground mt-1">Gestión de consultas, presupuestos e información para escritos</p>
         </div>
-        <Button onClick={openNew} className="gap-2">
+        <Button onClick={valorBase > 0 ? openNewWithIUS : openNew} className="gap-2">
           <Plus className="w-4 h-4" /> Nueva Consulta
         </Button>
       </div>
