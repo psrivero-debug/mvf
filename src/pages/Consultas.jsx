@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +70,9 @@ export default function Consultas() {
   const [tarifaCategoryFilter, setTarifaCategoryFilter] = useState("all");
   const [selectedTarifas, setSelectedTarifas] = useState(new Set());
   const [selectedGastos, setSelectedGastos] = useState(new Set());
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
+  const autoSaveTimerRef = useRef(null);
   const queryClient = useQueryClient();
 
   const { data: consultas = [], isLoading } = useQuery({
@@ -116,8 +119,32 @@ export default function Consultas() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Consulta.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["consultas"] }); closeDialog(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["consultas"] }); if (!autoSaveEnabled) closeDialog(); },
   });
+
+  const autoSaveMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Consulta.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["consultas"] }); setAutoSaveStatus('saved'); setTimeout(() => setAutoSaveStatus('idle'), 2000); },
+    onError: () => { setAutoSaveStatus('error'); setTimeout(() => setAutoSaveStatus('idle'), 2000); },
+  });
+
+  useEffect(() => {
+    if (!autoSaveEnabled || !editing || autoSaveStatus === 'saving') return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    setAutoSaveStatus('saving');
+    autoSaveTimerRef.current = setTimeout(() => {
+      const selectedClient = clients.find(c => c.id === form.client_id);
+      const data = {
+        ...form,
+        client_name: selectedClient?.full_name || form.client_name,
+        presupuesto_ius: form.presupuesto_ius ? parseFloat(form.presupuesto_ius) : null,
+        presupuesto_pesos: form.presupuesto_pesos ? parseFloat(form.presupuesto_pesos) : null,
+        gastos_estimados: form.gastos_estimados ? parseFloat(form.gastos_estimados) : null,
+      };
+      autoSaveMutation.mutate({ id: editing.id, data });
+    }, 1000);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [form, autoSaveEnabled, editing, clients]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Consulta.delete(id),
@@ -343,10 +370,23 @@ export default function Consultas() {
 
       {/* Dialog Consulta */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-serif">{editing ? "Editar Consulta" : "Nueva Consulta"}</DialogTitle>
-          </DialogHeader>
+       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogHeader>
+           <div className="flex items-center justify-between">
+             <DialogTitle className="font-serif">{editing ? "Editar Consulta" : "Nueva Consulta"}</DialogTitle>
+             {editing && (
+               <div className="flex items-center gap-2 text-xs">
+                 <label className="flex items-center gap-1 cursor-pointer">
+                   <input type="checkbox" checked={autoSaveEnabled} onChange={(e) => setAutoSaveEnabled(e.target.checked)} className="rounded" />
+                   <span>Auto-guardar</span>
+                 </label>
+                 {autoSaveStatus === 'saving' && <span className="text-muted-foreground">Guardando...</span>}
+                 {autoSaveStatus === 'saved' && <span className="text-green-600 font-medium">✓ Guardado</span>}
+                 {autoSaveStatus === 'error' && <span className="text-destructive font-medium">Error</span>}
+               </div>
+             )}
+           </div>
+         </DialogHeader>
 
           {/* Tabs */}
           <div className="flex border-b mb-4">
