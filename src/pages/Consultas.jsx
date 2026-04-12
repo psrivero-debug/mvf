@@ -70,7 +70,7 @@ export default function Consultas() {
   const [tarifaCategoryFilter, setTarifaCategoryFilter] = useState("all");
   const [selectedTarifas, setSelectedTarifas] = useState(new Set());
   const [selectedGastos, setSelectedGastos] = useState(new Set());
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
   const autoSaveTimerRef = useRef(null);
   const queryClient = useQueryClient();
