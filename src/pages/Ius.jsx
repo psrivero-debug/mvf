@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Calculator, TrendingUp, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, TrendingUp, Save, CheckSquare } from "lucide-react";
 
 const categoriaLabels = {
   consulta: "Consulta",
@@ -38,6 +38,7 @@ export default function Ius() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyTarifa);
   const [editingBase, setEditingBase] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [baseForm, setBaseForm] = useState({ valor_base: "", descripcion: "", fecha_vigencia: "" });
 
   const { data: configs = [] } = useQuery({
@@ -108,7 +109,24 @@ export default function Ius() {
     return matchConcepto && matchCat;
   });
 
-  const totalIus = tarifasFiltradas.reduce((acc, t) => acc + (t.multiplicador || 0), 0);
+  const toggleSelected = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (tarifasFiltradas.every(t => selectedIds.has(t.id))) {
+      setSelectedIds(prev => { const next = new Set(prev); tarifasFiltradas.forEach(t => next.delete(t.id)); return next; });
+    } else {
+      setSelectedIds(prev => { const next = new Set(prev); tarifasFiltradas.forEach(t => next.add(t.id)); return next; });
+    }
+  };
+
+  const selectedTarifas = selectedIds.size > 0 ? tarifas.filter(t => selectedIds.has(t.id)) : tarifasFiltradas;
+  const totalIus = selectedTarifas.reduce((acc, t) => acc + (t.multiplicador || 0), 0);
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -186,7 +204,9 @@ export default function Ius() {
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-center">
-                  <p className="text-primary-foreground/60 text-xs">Total IUS en tabla</p>
+                  <p className="text-primary-foreground/60 text-xs">
+                    {selectedIds.size > 0 ? `Total (${selectedIds.size} seleccionados)` : "Total IUS en tabla"}
+                  </p>
                   <p className="font-serif text-2xl font-bold">{totalIus}</p>
                 </div>
                 <Button size="sm" variant="secondary" onClick={openEditBase} className="gap-1.5">
@@ -199,7 +219,7 @@ export default function Ius() {
       </Card>
 
       {/* FILTROS */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
         <div className="relative flex-1 max-w-sm">
           <input
             type="text"
@@ -217,6 +237,11 @@ export default function Ius() {
             {Object.entries(categoriaLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
+        {selectedIds.size > 0 && (
+          <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())} className="text-xs gap-1 shrink-0">
+            <CheckSquare className="w-3.5 h-3.5" /> Limpiar selección ({selectedIds.size})
+          </Button>
+        )}
       </div>
 
       {/* TABLA DE TARIFAS */}
@@ -241,6 +266,14 @@ export default function Ius() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <th className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={tarifasFiltradas.length > 0 && tarifasFiltradas.every(t => selectedIds.has(t.id))}
+                      onChange={toggleAll}
+                    />
+                  </th>
                   <th className="text-left px-5 py-3 font-medium">Concepto</th>
                   <th className="text-left px-5 py-3 font-medium">Categoría</th>
                   <th className="text-right px-5 py-3 font-medium">IUS</th>
@@ -250,9 +283,17 @@ export default function Ius() {
               </thead>
               <tbody className="divide-y divide-border">
                 {tarifasFiltradas.map(t => (
-                  <tr key={t.id} className="hover:bg-muted/30 transition-colors group">
+                  <tr key={t.id} className={`hover:bg-muted/30 transition-colors group ${selectedIds.has(t.id) ? "bg-accent/10" : ""}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={selectedIds.has(t.id)}
+                        onChange={() => toggleSelected(t.id)}
+                      />
+                    </td>
                     <td className="px-5 py-4">
-                      <p className="font-medium text-foreground">{t.concepto}</p>
+                       <p className="font-medium text-foreground">{t.concepto}</p>
                       {t.descripcion && <p className="text-xs text-muted-foreground mt-0.5">{t.descripcion}</p>}
                     </td>
                     <td className="px-5 py-4">
@@ -289,7 +330,11 @@ export default function Ius() {
               {valorBase > 0 && (
                 <tfoot>
                   <tr className="bg-muted/40 border-t-2 border-border font-semibold">
-                    <td className="px-5 py-3 text-sm" colSpan={2}>Total general</td>
+                    <td className="px-4 py-3" />
+                    <td className="px-5 py-3 text-sm">
+                      {selectedIds.size > 0 ? `Total (${selectedIds.size} seleccionados)` : "Total general"}
+                    </td>
+                    <td />
                     <td className="px-5 py-3 text-right font-mono text-primary">{totalIus} IUS</td>
                     <td className="px-5 py-3 text-right text-accent-foreground">{formatPesos(valorBase * totalIus)}</td>
                     <td />
