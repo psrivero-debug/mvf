@@ -35,6 +35,17 @@ const tipoLabels = {
   comercial: "Comercial", administrativo: "Administrativo", inmobiliario: "Inmobiliario", otro: "Otro",
 };
 
+const requisitosAsunto = {
+  civil: ["Escritura original o copia legalizada", "Comprobantes de reclamo previo", "Presupuestos o cotizaciones", "Documentación del contrato en cuestión"],
+  penal: ["Denuncia policial o judicial", "Documentación médica (si es relevante)", "Testigos identificados", "Antecedentes penales del denunciado"],
+  laboral: ["Recibos de sueldo", "Contrato de trabajo", "Comunicación de despido", "Liquidación final o documentación de aportes"],
+  familia: ["Partida de nacimiento/matrimonio/divorcio", "Documentación de patria potestad", "Prueba de ingresos", "Bienes a considerar en división"],
+  comercial: ["Escritura constitutiva", "Estatuto social", "Balances contables", "Contratos comerciales relevantes"],
+  administrativo: ["Resolución administrativa impugnada", "Solicitudes previas", "Documentación que sustenta la impugnación", "Pruebas de cumplimiento de plazos"],
+  inmobiliario: ["Escritura de propiedad", "Plano catastral", "Certificado de dominio", "Documentación de reclamos previos"],
+  otro: ["Documentación relevante al caso", "Comunicaciones previas", "Pruebas de reclamo", "Cualquier antecedente útil"],
+};
+
 const emptyConsulta = {
   numero: "", fecha: new Date().toISOString().split("T")[0], client_id: "", client_name: "",
   tipo_asunto: "civil", estado: "pendiente", resumen: "", hechos: "", partes: "",
@@ -326,6 +337,19 @@ export default function Consultas() {
                       {Object.entries(tipoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+                    <div className="mt-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <p className="text-xs font-semibold text-blue-900 mb-2">Requisitos a presentar:</p>
+                      <ul className="text-xs text-blue-800 space-y-1">
+                        {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">•</span>
+                            <span>{req}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="grid gap-2">
@@ -378,6 +402,19 @@ export default function Consultas() {
                 <Label>Jurisdicción / Juzgado</Label>
                 <Input placeholder="Ej: Juzgado Civil Nº 5 de Santa Fe" value={form.jurisdiccion} onChange={e => setForm({ ...form, jurisdiccion: e.target.value })} />
               </div>
+              {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+                <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200 space-y-2">
+                  <p className="text-sm font-semibold text-yellow-900">Documentación solicitada para {tipoLabels[form.tipo_asunto]}:</p>
+                  <ul className="text-sm text-yellow-800 space-y-1.5">
+                    {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-yellow-600 font-bold mt-0.5">✓</span>
+                        <span>{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
