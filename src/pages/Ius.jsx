@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Calculator, TrendingUp, Save, CheckSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, TrendingUp, Save, CheckSquare, Printer, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const categoriaLabels = {
   consulta: "Consulta",
@@ -93,6 +94,31 @@ export default function Ius() {
     setEditingBase(true);
   };
 
+  const handlePrint = () => {
+    const filas = selectedTarifas.map(t => `
+      <tr style="border-bottom:1px solid #e2e8f0">
+        <td style="padding:8px 12px">${t.concepto}</td>
+        <td style="padding:8px 12px">${categoriaLabels[t.categoria] || t.categoria}</td>
+        <td style="padding:8px 12px;text-align:right">${t.multiplicador} IUS</td>
+        <td style="padding:8px 12px;text-align:right">${valorBase > 0 ? (valorBase * t.multiplicador).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : '—'}</td>
+      </tr>
+    `).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tabla IUS - Pérez & Funes</title>
+    <style>body{font-family:serif;padding:32px;color:#1e293b}h1{font-size:22px;margin-bottom:4px}p{margin:0 0 4px;font-size:13px;color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}thead tr{background:#1e3a5f;color:white}th{padding:10px 12px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em}tbody tr:nth-child(even){background:#f8fafc}tfoot tr{background:#f1f5f9;font-weight:700;border-top:2px solid #cbd5e1}</style>
+    </head><body>
+    <h1>Pérez & Funes — Tabla de Honorarios IUS</h1>
+    <p>Valor IUS: ${valorBase > 0 ? valorBase.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : 'Sin configurar'} — ${config?.fecha_vigencia || ''} ${config?.descripcion ? '(' + config.descripcion + ')' : ''}</p>
+    <p>Generado: ${new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' })}</p>
+    <table><thead><tr><th>Concepto</th><th>Categoría</th><th style="text-align:right">IUS</th><th style="text-align:right">Valor estimado</th></tr></thead>
+    <tbody>${filas}</tbody>
+    <tfoot><tr><td colspan="2" style="padding:8px 12px">${selectedIds.size > 0 ? 'Total seleccionados (' + selectedIds.size + ')' : 'Total general'}</td><td style="padding:8px 12px;text-align:right">${totalIus} IUS</td><td style="padding:8px 12px;text-align:right">${valorBase > 0 ? (valorBase * totalIus).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }) : '—'}</td></tr></tfoot>
+    </table></body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    w.print();
+  };
+
   const handleSubmitTarifa = () => {
     const data = { ...form, multiplicador: parseFloat(form.multiplicador) };
     if (editing) updateTarifa.mutate({ id: editing.id, data });
@@ -131,13 +157,25 @@ export default function Ius() {
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-serif font-bold">Tabla de IUS</h1>
-          <p className="text-muted-foreground mt-1">Aranceles calculados sobre el valor unitario del IUS</p>
+        <div className="flex items-center gap-3">
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              <ArrowLeft className="w-4 h-4" /> Panel
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-serif font-bold">Tabla de IUS</h1>
+            <p className="text-muted-foreground mt-1">Aranceles calculados sobre el valor unitario del IUS</p>
+          </div>
         </div>
-        <Button onClick={() => { setForm(emptyTarifa); setEditing(null); setDialogOpen(true); }} className="gap-2">
-          <Plus className="w-4 h-4" /> Nuevo Concepto
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrint} className="gap-2">
+            <Printer className="w-4 h-4" /> Imprimir {selectedIds.size > 0 ? `(${selectedIds.size})` : "tabla"}
+          </Button>
+          <Button onClick={() => { setForm(emptyTarifa); setEditing(null); setDialogOpen(true); }} className="gap-2">
+            <Plus className="w-4 h-4" /> Nuevo Concepto
+          </Button>
+        </div>
       </div>
 
       {/* VALOR BASE IUS */}
