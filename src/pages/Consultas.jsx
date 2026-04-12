@@ -95,6 +95,11 @@ export default function Consultas() {
     queryFn: () => base44.entities.IusTarifa.list("concepto"),
   });
 
+  const { data: requisitosData = [] } = useQuery({
+    queryKey: ["requisitos"],
+    queryFn: () => base44.entities.Requisito.list("orden"),
+  });
+
   const saveBudgetMutation = useMutation({
     mutationFn: (data) => base44.entities.Presupuesto.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presupuestos"] }),
@@ -174,6 +179,8 @@ export default function Consultas() {
 
   const formatPesos = (n) => n?.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }) || "—";
 
+  const getRequisitos = (tipo) => requisitosData.filter(r => r.tipo_asunto === tipo).sort((a, b) => (a.orden || 0) - (b.orden || 0)).map(r => r.descripcion);
+
   const filtered = consultas.filter(c => {
     const matchSearch = c.client_name?.toLowerCase().includes(search.toLowerCase()) ||
       c.resumen?.toLowerCase().includes(search.toLowerCase()) ||
@@ -198,7 +205,7 @@ export default function Consultas() {
     const hoy = new Date();
     const vencimiento = new Date(hoy.getTime() + 10 * 24 * 60 * 60 * 1000);
     const tipoAsunto = tipoLabels[form.tipo_asunto] || 'Sin especificar';
-    const requisitos = form.tipo_asunto && requisitosAsunto[form.tipo_asunto] ? requisitosAsunto[form.tipo_asunto] : [];
+    const requisitos = getRequisitos(form.tipo_asunto);
     const reqHtml = requisitos.length > 0 ? `<div style="margin:20px 0;padding:15px;background:#f9f9f9;border-left:4px solid #1e3a5f"><p style="margin:0 0 10px;font-weight:bold">Documentación a presentar:</p><ul style="margin:0;padding-left:20px">${requisitos.map(req => `<li style="margin:5px 0">${req}</li>`).join('')}</ul></div>` : '';
     const conceptoSeleccionado = Array.from(selectedTarifas).map(id => tarifas.find(t => t.id === id)?.concepto).filter(Boolean).join(', ') || form.resumen || 'Servicios profesionales';
     
@@ -436,11 +443,11 @@ export default function Consultas() {
                       {Object.entries(tipoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+                  {form.tipo_asunto && getRequisitos(form.tipo_asunto).length > 0 && (
                     <div className="mt-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
                       <p className="text-xs font-semibold text-blue-900 mb-2">Requisitos a presentar:</p>
                       <ul className="text-xs text-blue-800 space-y-1">
-                        {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                        {getRequisitos(form.tipo_asunto).map((req, i) => (
                           <li key={i} className="flex items-start gap-2">
                             <span className="text-blue-600 font-bold mt-0.5">•</span>
                             <span>{req}</span>
@@ -501,11 +508,11 @@ export default function Consultas() {
                 <Label>Jurisdicción / Juzgado</Label>
                 <Input placeholder="Ej: Juzgado Civil Nº 5 de Santa Fe" value={form.jurisdiccion} onChange={e => setForm({ ...form, jurisdiccion: e.target.value })} />
               </div>
-              {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+              {form.tipo_asunto && getRequisitos(form.tipo_asunto).length > 0 && (
                 <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200 space-y-2">
                   <p className="text-sm font-semibold text-yellow-900">Documentación solicitada para {tipoLabels[form.tipo_asunto]}:</p>
                   <ul className="text-sm text-yellow-800 space-y-1.5">
-                    {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                    {getRequisitos(form.tipo_asunto).map((req, i) => (
                       <li key={i} className="flex items-start gap-2">
                         <span className="text-yellow-600 font-bold mt-0.5">✓</span>
                         <span>{req}</span>
@@ -519,11 +526,11 @@ export default function Consultas() {
 
           {tab === "presupuesto" && (
             <div className="grid gap-4">
-              {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+              {form.tipo_asunto && getRequisitos(form.tipo_asunto).length > 0 && (
                 <div className="p-4 rounded-lg bg-green-50 border border-green-200 space-y-2">
                   <p className="text-sm font-semibold text-green-900">Documentación requerida para {tipoLabels[form.tipo_asunto]}:</p>
                   <ul className="text-sm text-green-800 space-y-1.5">
-                    {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                    {getRequisitos(form.tipo_asunto).map((req, i) => (
                       <li key={i} className="flex items-start gap-2">
                         <span className="text-green-600 font-bold mt-0.5">✓</span>
                         <span>{req}</span>

@@ -1,0 +1,33 @@
+{
+  "name": "Requisito",
+  "type": "object",
+  "properties": {
+    "tipo_asunto": {
+      "type": "string",
+      "enum": [
+        "civil",
+        "penal",
+        "laboral",
+        "familia",
+        "comercial",
+        "administrativo",
+        "inmobiliario",
+        "otro"
+      ],
+      "description": "Tipo de asunto legal"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del requisito"
+    },
+    "orden": {
+      "type": "number",
+      "description": "Orden de aparici\u00f3n",
+      "default": 0
+    }
+  },
+  "required": [
+    "tipo_asunto",
+    "descripcion"
+  ]
+}
