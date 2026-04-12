@@ -473,6 +473,19 @@ export default function Consultas() {
 
           {tab === "presupuesto" && (
             <div className="grid gap-4">
+              {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+                <div className="p-4 rounded-lg bg-green-50 border border-green-200 space-y-2">
+                  <p className="text-sm font-semibold text-green-900">Documentación requerida para {tipoLabels[form.tipo_asunto]}:</p>
+                  <ul className="text-sm text-green-800 space-y-1.5">
+                    {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-green-600 font-bold mt-0.5">✓</span>
+                        <span>{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {valorBase > 0 && (
                 <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
                   <span className="text-muted-foreground">Valor IUS vigente: </span>
