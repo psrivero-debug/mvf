@@ -454,6 +454,10 @@ export default function Consultas() {
                     <span className="text-center"><div className="font-medium">Aporte Colegio</div><div className="text-muted-foreground">$8.000</div></span>
                   </Button>
                 </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs">Tasas Judiciales (definir monto)</Label>
+                  <Input type="number" min="0" step="1" placeholder="Ingresar monto" className="text-xs" onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) { setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + val) }); e.target.value = ""; } }} />
+                </div>
               </div>
               {(form.presupuesto_pesos || form.gastos_estimados) && (
                 <div className="p-4 rounded-lg bg-accent/10 border border-accent/20 space-y-1">
