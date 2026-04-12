@@ -1,0 +1,22 @@
+{
+  "name": "IusConfig",
+  "type": "object",
+  "properties": {
+    "valor_base": {
+      "type": "number",
+      "description": "Valor monetario de 1 IUS en pesos"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Observaciones sobre la actualizaci\u00f3n"
+    },
+    "fecha_vigencia": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha desde la cual rige este valor"
+    }
+  },
+  "required": [
+    "valor_base"
+  ]
+}

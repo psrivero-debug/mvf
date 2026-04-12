@@ -1,0 +1,38 @@
+{
+  "name": "IusTarifa",
+  "type": "object",
+  "properties": {
+    "concepto": {
+      "type": "string",
+      "description": "Nombre del servicio o tipo de causa"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "consulta",
+        "asesoria",
+        "defensa",
+        "redaccion",
+        "mediacion",
+        "otro"
+      ],
+      "description": "Categor\u00eda del servicio"
+    },
+    "multiplicador": {
+      "type": "number",
+      "description": "Cantidad de IUS que corresponde a este servicio"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Detalle del servicio incluido"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "concepto",
+    "multiplicador"
+  ]
+}

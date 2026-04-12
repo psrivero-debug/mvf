@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
+import Ius from './pages/Ius';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Cases from './pages/Cases';
@@ -46,6 +47,7 @@ const AuthenticatedApp = () => {
         <Route path="/consulta" element={<LegalConsultant />} />
       </Route>
         <Route path="/web" element={<Landing />} />
+        <Route path="/ius" element={<Ius />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
