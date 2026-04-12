@@ -58,6 +58,7 @@ export default function Consultas() {
   const [tarифаSearch, setTarifaSearch] = useState("");
   const [tarifaCategoryFilter, setTarifaCategoryFilter] = useState("all");
   const [selectedTarifas, setSelectedTarifas] = useState(new Set());
+  const [selectedGastos, setSelectedGastos] = useState(new Set());
   const queryClient = useQueryClient();
 
   const { data: consultas = [], isLoading } = useQuery({
@@ -477,17 +478,83 @@ export default function Consultas() {
               </div>
               <div className="grid gap-2">
                 <Label>Gastos estimados ($)</Label>
-                <Input type="number" min="0" step="1" placeholder="Sellados, tasas, gastos judiciales..." value={form.gastos_estimados} onChange={e => setForm({ ...form, gastos_estimados: Math.round(parseFloat(e.target.value) || 0).toString() })} />
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + 20000) })} className="h-auto py-1.5">
-                    <span className="text-center"><div className="font-medium">Inicio Causa</div><div className="text-muted-foreground">$20.000</div></span>
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + 70000) })} className="h-auto py-1.5">
-                    <span className="text-center"><div className="font-medium">Desarchivo</div><div className="text-muted-foreground">$70.000</div></span>
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + 8000) })} className="h-auto py-1.5">
-                    <span className="text-center"><div className="font-medium">Aporte Colegio</div><div className="text-muted-foreground">$8.000</div></span>
-                  </Button>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                  <Input 
+                    type="text" 
+                    placeholder="0" 
+                    value={form.gastos_estimados ? parseInt(form.gastos_estimados).toLocaleString('es-AR') : ''}
+                    onChange={e => setForm({ ...form, gastos_estimados: Math.round(parseFloat(e.target.value.replace(/\./g, '')) || 0).toString() })}
+                    className="pl-8"
+                  />
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 rounded border">
+                    <input
+                      type="checkbox"
+                      id="gasto-inicio"
+                      checked={selectedGastos.has('inicio')}
+                      onChange={(e) => {
+                        const newGastos = new Set(selectedGastos);
+                        let total = parseFloat(form.gastos_estimados) || 0;
+                        if (e.target.checked) {
+                          newGastos.add('inicio');
+                          total += 20000;
+                        } else {
+                          newGastos.delete('inicio');
+                          total -= 20000;
+                        }
+                        setSelectedGastos(newGastos);
+                        setForm({ ...form, gastos_estimados: String(Math.round(total)) });
+                      }}
+                      className="rounded"
+                    />
+                    <label htmlFor="gasto-inicio" className="flex-1 cursor-pointer font-medium">Inicio de Causa: $20.000</label>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded border">
+                    <input
+                      type="checkbox"
+                      id="gasto-desarchivo"
+                      checked={selectedGastos.has('desarchivo')}
+                      onChange={(e) => {
+                        const newGastos = new Set(selectedGastos);
+                        let total = parseFloat(form.gastos_estimados) || 0;
+                        if (e.target.checked) {
+                          newGastos.add('desarchivo');
+                          total += 70000;
+                        } else {
+                          newGastos.delete('desarchivo');
+                          total -= 70000;
+                        }
+                        setSelectedGastos(newGastos);
+                        setForm({ ...form, gastos_estimados: String(Math.round(total)) });
+                      }}
+                      className="rounded"
+                    />
+                    <label htmlFor="gasto-desarchivo" className="flex-1 cursor-pointer font-medium">Desarchivo: $70.000</label>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded border">
+                    <input
+                      type="checkbox"
+                      id="gasto-aporte"
+                      checked={selectedGastos.has('aporte')}
+                      onChange={(e) => {
+                        const newGastos = new Set(selectedGastos);
+                        let total = parseFloat(form.gastos_estimados) || 0;
+                        if (e.target.checked) {
+                          newGastos.add('aporte');
+                          total += 8000;
+                        } else {
+                          newGastos.delete('aporte');
+                          total -= 8000;
+                        }
+                        setSelectedGastos(newGastos);
+                        setForm({ ...form, gastos_estimados: String(Math.round(total)) });
+                      }}
+                      className="rounded"
+                    />
+                    <label htmlFor="gasto-aporte" className="flex-1 cursor-pointer font-medium">Aporte al Colegio: $8.000</label>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs">Tasas Judiciales (definir monto)</Label>
