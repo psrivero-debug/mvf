@@ -437,7 +437,7 @@ export default function Consultas() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Honorarios en pesos ($)</Label>
-                  <Input type="number" min="0" placeholder="Monto en ARS" value={form.presupuesto_pesos} onChange={e => setForm({ ...form, presupuesto_pesos: e.target.value })} />
+                  <Input type="number" min="0" step="1" placeholder="Monto en ARS" value={form.presupuesto_pesos} onChange={e => setForm({ ...form, presupuesto_pesos: Math.round(parseFloat(e.target.value) || 0).toString() })} />
                 </div>
               </div>
               <div className="grid gap-2">
