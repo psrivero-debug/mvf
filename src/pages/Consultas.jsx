@@ -72,6 +72,11 @@ export default function Consultas() {
     queryFn: () => base44.entities.IusConfig.list("-created_date", 1),
   });
 
+  const { data: tarifas = [] } = useQuery({
+    queryKey: ["iustarifas"],
+    queryFn: () => base44.entities.IusTarifa.list("concepto"),
+  });
+
   const valorBase = configs[0]?.valor_base || 0;
 
   const createClientMutation = useMutation({
@@ -128,7 +133,6 @@ export default function Consultas() {
     return matchSearch && matchEstado;
   });
 
-  // Auto-calcular pesos desde IUS
   const handleIusChange = (val) => {
     setForm(prev => ({
       ...prev,
@@ -261,7 +265,7 @@ export default function Consultas() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog */}
+      {/* Dialog Consulta */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -378,6 +382,30 @@ export default function Consultas() {
                   <span className="text-muted-foreground">Valor IUS vigente: </span>
                   <span className="font-semibold text-primary">{formatPesos(valorBase)}</span>
                   <span className="text-muted-foreground ml-2 text-xs">(los pesos se calculan automáticamente)</span>
+                </div>
+              )}
+              {tarifas.length > 0 && (
+                <div className="grid gap-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Conceptos de la Tabla IUS</Label>
+                  <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                    {tarifas.filter(t => t.activo).map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleIusChange(t.multiplicador.toString())}
+                        className="w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors flex items-center justify-between gap-2 text-sm"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{t.concepto}</p>
+                          {t.descripcion && <p className="text-xs text-muted-foreground line-clamp-1">{t.descripcion}</p>}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-semibold text-primary text-sm">{t.multiplicador} IUS</p>
+                          {valorBase > 0 && <p className="text-xs text-muted-foreground">{formatPesos(t.multiplicador * valorBase)}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
