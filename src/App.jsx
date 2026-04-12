@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Cases from './pages/Cases';
@@ -44,6 +45,7 @@ const AuthenticatedApp = () => {
         <Route path="/redaccion" element={<DocumentDrafting />} />
         <Route path="/consulta" element={<LegalConsultant />} />
       </Route>
+        <Route path="/web" element={<Landing />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
