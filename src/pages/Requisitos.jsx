@@ -20,6 +20,17 @@ const tipoLabels = {
   otro: "Otro",
 };
 
+const requisitosIniciales = {
+  civil: ["Escritura original o copia legalizada", "Comprobantes de reclamo previo", "Presupuestos o cotizaciones", "Documentación del contrato en cuestión"],
+  penal: ["Denuncia policial o judicial", "Documentación médica (si es relevante)", "Testigos identificados", "Antecedentes penales del denunciado"],
+  laboral: ["Recibos de sueldo", "Contrato de trabajo", "Comunicación de despido", "Liquidación final o documentación de aportes"],
+  familia: ["Partida de nacimiento/matrimonio/divorcio", "Documentación de patria potestad", "Prueba de ingresos", "Bienes a considerar en división"],
+  comercial: ["Escritura constitutiva", "Estatuto social", "Balances contables", "Contratos comerciales relevantes"],
+  administrativo: ["Resolución administrativa impugnada", "Solicitudes previas", "Documentación que sustenta la impugnación", "Pruebas de cumplimiento de plazos"],
+  inmobiliario: ["Escritura de propiedad", "Plano catastral", "Certificado de dominio", "Documentación de reclamos previos"],
+  otro: ["Documentación relevante al caso", "Comunicaciones previas", "Pruebas de reclamo", "Cualquier antecedente útil"],
+};
+
 export default function Requisitos() {
   const [selectedTipo, setSelectedTipo] = useState("civil");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -38,6 +49,20 @@ export default function Requisitos() {
       setNewRequisito("");
       setDialogOpen(false);
     },
+  });
+
+  const loadInitialMutation = useMutation({
+    mutationFn: async () => {
+      const allRequisitos = [];
+      let orden = 0;
+      for (const [tipo, items] of Object.entries(requisitosIniciales)) {
+        for (const descripcion of items) {
+          allRequisitos.push({ tipo_asunto: tipo, descripcion, orden: orden++ });
+        }
+      }
+      await base44.entities.Requisito.bulkCreate(allRequisitos);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["requisitos"] }),
   });
 
   const deleteMutation = useMutation({
@@ -90,9 +115,16 @@ export default function Requisitos() {
           <h1 className="text-2xl lg:text-3xl font-serif font-bold">Requisitos por Trámite</h1>
           <p className="text-muted-foreground mt-1">Gestiona la documentación requerida para cada tipo de asunto</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" /> Agregar Requisito
-        </Button>
+        <div className="flex gap-2">
+          {requisitos.length === 0 && (
+            <Button onClick={() => loadInitialMutation.mutate()} variant="outline" disabled={loadInitialMutation.isPending}>
+              Cargar datos iniciales
+            </Button>
+          )}
+          <Button onClick={() => setDialogOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Agregar Requisito
+          </Button>
+        </div>
       </div>
 
       {/* Selector de Tipo */}
