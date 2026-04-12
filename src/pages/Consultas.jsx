@@ -55,6 +55,8 @@ export default function Consultas() {
   const [tab, setTab] = useState("datos");
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [clientForm, setClientForm] = useState({ full_name: "", phone: "", address: "", ocupacion: "", datos_a_tener_en_cuenta: "" });
+  const [tarифаSearch, setTarifaSearch] = useState("");
+  const [tarifaCategoryFilter, setTarifaCategoryFilter] = useState("all");
   const queryClient = useQueryClient();
 
   const { data: consultas = [], isLoading } = useQuery({
@@ -387,8 +389,28 @@ export default function Consultas() {
               {tarifas.length > 0 && (
                 <div className="grid gap-2">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">Conceptos de la Tabla IUS</Label>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <Input
+                      placeholder="Buscar concepto..."
+                      value={tarифаSearch}
+                      onChange={(e) => setTarifaSearch(e.target.value)}
+                      className="text-xs"
+                    />
+                    <Select value={tarifaCategoryFilter} onValueChange={setTarifaCategoryFilter}>
+                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="consulta">Consulta</SelectItem>
+                        <SelectItem value="asesoria">Asesoría</SelectItem>
+                        <SelectItem value="defensa">Defensa</SelectItem>
+                        <SelectItem value="redaccion">Redacción</SelectItem>
+                        <SelectItem value="mediacion">Mediación</SelectItem>
+                        <SelectItem value="otro">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                    {tarifas.filter(t => t.activo).map(t => (
+                    {tarifas.filter(t => t.activo && (tarифаSearch === "" || t.concepto.toLowerCase().includes(tarифаSearch.toLowerCase()) || t.descripcion?.toLowerCase().includes(tarифаSearch.toLowerCase())) && (tarifaCategoryFilter === "all" || t.categoria === tarifaCategoryFilter)).map(t => (
                       <button
                         key={t.id}
                         type="button"
