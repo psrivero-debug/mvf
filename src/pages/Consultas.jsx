@@ -173,6 +173,7 @@ export default function Consultas() {
     const tipoAsunto = tipoLabels[form.tipo_asunto] || 'Sin especificar';
     const requisitos = form.tipo_asunto && requisitosAsunto[form.tipo_asunto] ? requisitosAsunto[form.tipo_asunto] : [];
     const reqHtml = requisitos.length > 0 ? `<div style="margin:20px 0;padding:15px;background:#f9f9f9;border-left:4px solid #1e3a5f"><p style="margin:0 0 10px;font-weight:bold">Documentación a presentar:</p><ul style="margin:0;padding-left:20px">${requisitos.map(req => `<li style="margin:5px 0">${req}</li>`).join('')}</ul></div>` : '';
+    const conceptoSeleccionado = Array.from(selectedTarifas).map(id => tarifas.find(t => t.id === id)?.concepto).filter(Boolean).join(', ') || form.resumen || 'Servicios profesionales';
     
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px;margin:0 0 10px}p{margin:5px 0}.header{border-bottom:3px solid #1e3a5f;padding-bottom:20px;margin-bottom:30px}.client{font-weight:bold;font-size:18px;margin:20px 0}.asunto{margin:15px 0;padding:10px;background:#f0f7ff;border-left:3px solid #1e3a5f}.table{width:100%;border-collapse:collapse;margin:30px 0}.table th{background:#f0f0f0;padding:10px;text-align:left;border-bottom:2px solid #1e3a5f}.table td{padding:10px;border-bottom:1px solid #ddd}.amount{text-align:right;font-weight:bold}.footer{margin-top:40px;font-size:12px;color:#666;border-top:1px solid #ddd;padding-top:20px}</style>
@@ -185,7 +186,7 @@ export default function Consultas() {
     <div class="asunto"><strong>Tipo de asunto:</strong> ${tipoAsunto}</div>
     ${reqHtml}
     <table class="table"><tr><th>Concepto</th><th class="amount">Monto</th></tr>
-    <tr><td>${form.resumen || 'Servicios profesionales'}</td><td class="amount">$${montoLista.toLocaleString('es-AR')}</td></tr>
+    <tr><td>${conceptoSeleccionado}</td><td class="amount">$${montoLista.toLocaleString('es-AR')}</td></tr>
     </table>
     <table class="table"><tr><th>Opción de pago</th><th class="amount">Monto</th></tr>
     <tr><td><strong>Contado (15% desc.)</strong></td><td class="amount">$${montoContado.toLocaleString('es-AR')}</td></tr>
