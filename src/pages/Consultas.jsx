@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Search, ClipboardList, User, Calendar, Pencil, Trash2, Calculator, UserPlus } from "lucide-react";
+import AudioTranscriber from "../components/AudioTranscriber";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -344,8 +345,20 @@ export default function Consultas() {
                 <Textarea placeholder="Actor: Juan Pérez&#10;Demandado: María García&#10;Testigos: ..." value={form.partes} onChange={e => setForm({ ...form, partes: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2">
-                <Label>Relato de hechos</Label>
-                <Textarea placeholder="Descripción detallada y cronológica de los hechos para los escritos judiciales..." value={form.hechos} onChange={e => setForm({ ...form, hechos: e.target.value })} rows={6} />
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Relato de hechos</Label>
+                </div>
+                <AudioTranscriber
+                  onTranscript={(text) =>
+                    setForm(prev => ({ ...prev, hechos: prev.hechos ? prev.hechos + " " + text : text }))
+                  }
+                />
+                <Textarea
+                  placeholder="Descripción detallada y cronológica de los hechos para los escritos judiciales..."
+                  value={form.hechos}
+                  onChange={e => setForm({ ...form, hechos: e.target.value })}
+                  rows={8}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Documentación</Label>
