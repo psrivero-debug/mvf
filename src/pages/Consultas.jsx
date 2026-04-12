@@ -454,7 +454,10 @@ export default function Consultas() {
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Honorarios en IUS</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Honorarios en IUS</Label>
+                    {valorBase > 0 && <p className="text-xs text-muted-foreground">Vigente: {formatPesos(valorBase)}</p>}
+                  </div>
                   <Input type="number" min="0" step="0.5" placeholder="Cantidad de IUS" value={form.presupuesto_ius} onChange={e => handleIusChange(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
