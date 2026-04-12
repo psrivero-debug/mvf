@@ -33,6 +33,8 @@ const emptyTarifa = { concepto: "", categoria: "consulta", multiplicador: "", de
 export default function Ius() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchConcepto, setSearchConcepto] = useState("");
+  const [filterCategoria, setFilterCategoria] = useState("all");
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyTarifa);
   const [editingBase, setEditingBase] = useState(false);
@@ -99,7 +101,14 @@ export default function Ius() {
   const formatPesos = (n) =>
     n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
-  const totalIus = tarifas.reduce((acc, t) => acc + (t.multiplicador || 0), 0);
+  const tarifasFiltradas = tarifas.filter(t => {
+    const matchConcepto = t.concepto?.toLowerCase().includes(searchConcepto.toLowerCase()) ||
+      t.descripcion?.toLowerCase().includes(searchConcepto.toLowerCase());
+    const matchCat = filterCategoria === "all" || t.categoria === filterCategoria;
+    return matchConcepto && matchCat;
+  });
+
+  const totalIus = tarifasFiltradas.reduce((acc, t) => acc + (t.multiplicador || 0), 0);
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -189,6 +198,27 @@ export default function Ius() {
         </CardContent>
       </Card>
 
+      {/* FILTROS */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <input
+            type="text"
+            placeholder="Buscar concepto..."
+            value={searchConcepto}
+            onChange={e => setSearchConcepto(e.target.value)}
+            className="w-full border border-input rounded-md px-3 py-2 pl-9 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Todas las categorías" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {Object.entries(categoriaLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* TABLA DE TARIFAS */}
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -219,7 +249,7 @@ export default function Ius() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {tarifas.map(t => (
+                {tarifasFiltradas.map(t => (
                   <tr key={t.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-5 py-4">
                       <p className="font-medium text-foreground">{t.concepto}</p>
