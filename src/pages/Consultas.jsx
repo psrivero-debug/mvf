@@ -1,0 +1,358 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Search, ClipboardList, User, Calendar, Pencil, Trash2, ChevronDown, ChevronUp, Calculator } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
+const estadoLabels = {
+  pendiente: "Pendiente",
+  en_proceso: "En proceso",
+  presupuestada: "Presupuestada",
+  aceptada: "Aceptada",
+  cerrada: "Cerrada",
+};
+
+const estadoColors = {
+  pendiente: "bg-yellow-100 text-yellow-700",
+  en_proceso: "bg-blue-100 text-blue-700",
+  presupuestada: "bg-purple-100 text-purple-700",
+  aceptada: "bg-green-100 text-green-700",
+  cerrada: "bg-gray-100 text-gray-600",
+};
+
+const tipoLabels = {
+  civil: "Civil", penal: "Penal", laboral: "Laboral", familia: "Familia",
+  comercial: "Comercial", administrativo: "Administrativo", inmobiliario: "Inmobiliario", otro: "Otro",
+};
+
+const emptyConsulta = {
+  numero: "", fecha: new Date().toISOString().split("T")[0], client_id: "", client_name: "",
+  tipo_asunto: "civil", estado: "pendiente", resumen: "", hechos: "", partes: "",
+  documentacion: "", jurisdiccion: "", presupuesto_ius: "", presupuesto_pesos: "",
+  gastos_estimados: "", notas: "", case_id: "",
+};
+
+const TABS = ["datos", "escritos", "presupuesto"];
+const TAB_LABELS = { datos: "Datos del cliente", escritos: "Info para escritos", presupuesto: "Presupuesto" };
+
+export default function Consultas() {
+  const [search, setSearch] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailId, setDetailId] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(emptyConsulta);
+  const [tab, setTab] = useState("datos");
+  const queryClient = useQueryClient();
+
+  const { data: consultas = [], isLoading } = useQuery({
+    queryKey: ["consultas"],
+    queryFn: () => base44.entities.Consulta.list("-created_date"),
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => base44.entities.Client.list(),
+  });
+
+  const { data: configs = [] } = useQuery({
+    queryKey: ["iusconfig"],
+    queryFn: () => base44.entities.IusConfig.list("-created_date", 1),
+  });
+
+  const valorBase = configs[0]?.valor_base || 0;
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Consulta.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["consultas"] }); closeDialog(); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Consulta.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["consultas"] }); closeDialog(); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Consulta.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["consultas"] }),
+  });
+
+  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyConsulta); setTab("datos"); };
+
+  const openNew = () => { setForm(emptyConsulta); setEditing(null); setTab("datos"); setDialogOpen(true); };
+
+  const openEdit = (c) => { setEditing(c); setForm({ ...emptyConsulta, ...c }); setTab("datos"); setDialogOpen(true); };
+
+  const handleSubmit = () => {
+    const selectedClient = clients.find(c => c.id === form.client_id);
+    const data = {
+      ...form,
+      client_name: selectedClient?.full_name || form.client_name,
+      presupuesto_ius: form.presupuesto_ius ? parseFloat(form.presupuesto_ius) : null,
+      presupuesto_pesos: form.presupuesto_pesos ? parseFloat(form.presupuesto_pesos) : null,
+      gastos_estimados: form.gastos_estimados ? parseFloat(form.gastos_estimados) : null,
+    };
+    if (editing) updateMutation.mutate({ id: editing.id, data });
+    else createMutation.mutate(data);
+  };
+
+  const formatPesos = (n) => n?.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }) || "—";
+
+  const filtered = consultas.filter(c => {
+    const matchSearch = c.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+      c.resumen?.toLowerCase().includes(search.toLowerCase()) ||
+      c.numero?.toLowerCase().includes(search.toLowerCase());
+    const matchEstado = estadoFilter === "all" || c.estado === estadoFilter;
+    return matchSearch && matchEstado;
+  });
+
+  // Auto-calcular pesos desde IUS
+  const handleIusChange = (val) => {
+    setForm(prev => ({
+      ...prev,
+      presupuesto_ius: val,
+      presupuesto_pesos: val && valorBase ? String(parseFloat(val) * valorBase) : prev.presupuesto_pesos,
+    }));
+  };
+
+  return (
+    <div className="p-6 lg:p-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-serif font-bold">Consultas</h1>
+          <p className="text-muted-foreground mt-1">Gestión de consultas, presupuestos e información para escritos</p>
+        </div>
+        <Button onClick={openNew} className="gap-2">
+          <Plus className="w-4 h-4" /> Nueva Consulta
+        </Button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar cliente, resumen, nº..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        </div>
+        <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Todos los estados" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            {Object.entries(estadoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Lista */}
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-12 text-center">
+            <ClipboardList className="w-12 h-12 mx-auto text-muted-foreground/40" />
+            <p className="text-muted-foreground mt-4">No hay consultas registradas</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(c => (
+            <Card key={c.id} className="border-0 shadow-sm hover:shadow-md transition-all group">
+              <CardContent className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {c.numero && <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">#{c.numero}</span>}
+                      <h3 className="font-semibold">{c.client_name}</h3>
+                      <Badge className={estadoColors[c.estado]} variant="secondary">{estadoLabels[c.estado]}</Badge>
+                      {c.tipo_asunto && <Badge variant="outline" className="text-xs">{tipoLabels[c.tipo_asunto]}</Badge>}
+                    </div>
+                    {c.resumen && <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{c.resumen}</p>}
+                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
+                      {c.fecha && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(c.fecha), "d 'de' MMMM yyyy", { locale: es })}
+                        </span>
+                      )}
+                      {c.presupuesto_pesos && (
+                        <span className="flex items-center gap-1 text-green-700 font-medium">
+                          <Calculator className="w-3 h-3" />
+                          {formatPesos(c.presupuesto_pesos)}
+                        </span>
+                      )}
+                      {c.jurisdiccion && <span>· {c.jurisdiccion}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => openEdit(c)} className="gap-1 text-xs">
+                      <Pencil className="w-3 h-3" /> Editar
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-destructive text-xs" onClick={() => deleteMutation.mutate(c.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif">{editing ? "Editar Consulta" : "Nueva Consulta"}</DialogTitle>
+          </DialogHeader>
+
+          {/* Tabs */}
+          <div className="flex border-b mb-4">
+            {TABS.map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                {TAB_LABELS[t]}
+              </button>
+            ))}
+          </div>
+
+          {tab === "datos" && (
+            <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Nº de Consulta</Label>
+                  <Input placeholder="Ej: 2026-001" value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Fecha *</Label>
+                  <Input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Cliente *</Label>
+                  <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectContent>
+                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Tipo de asunto</Label>
+                  <Select value={form.tipo_asunto} onValueChange={v => setForm({ ...form, tipo_asunto: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(tipoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Estado</Label>
+                <Select value={form.estado} onValueChange={v => setForm({ ...form, estado: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(estadoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Resumen del caso</Label>
+                <Textarea placeholder="Descripción breve del planteo del cliente..." value={form.resumen} onChange={e => setForm({ ...form, resumen: e.target.value })} rows={4} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Notas internas</Label>
+                <Textarea placeholder="Observaciones del estudio..." value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2} />
+              </div>
+            </div>
+          )}
+
+          {tab === "escritos" && (
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label>Partes involucradas</Label>
+                <Textarea placeholder="Actor: Juan Pérez&#10;Demandado: María García&#10;Testigos: ..." value={form.partes} onChange={e => setForm({ ...form, partes: e.target.value })} rows={3} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Relato de hechos</Label>
+                <Textarea placeholder="Descripción detallada y cronológica de los hechos para los escritos judiciales..." value={form.hechos} onChange={e => setForm({ ...form, hechos: e.target.value })} rows={6} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Documentación</Label>
+                <Textarea placeholder="Documentos presentados o requeridos: contratos, recibos, certificados..." value={form.documentacion} onChange={e => setForm({ ...form, documentacion: e.target.value })} rows={3} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Jurisdicción / Juzgado</Label>
+                <Input placeholder="Ej: Juzgado Civil Nº 5 de Santa Fe" value={form.jurisdiccion} onChange={e => setForm({ ...form, jurisdiccion: e.target.value })} />
+              </div>
+            </div>
+          )}
+
+          {tab === "presupuesto" && (
+            <div className="grid gap-4">
+              {valorBase > 0 && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+                  <span className="text-muted-foreground">Valor IUS vigente: </span>
+                  <span className="font-semibold text-primary">{formatPesos(valorBase)}</span>
+                  <span className="text-muted-foreground ml-2 text-xs">(los pesos se calculan automáticamente)</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Honorarios en IUS</Label>
+                  <Input type="number" min="0" step="0.5" placeholder="Cantidad de IUS" value={form.presupuesto_ius} onChange={e => handleIusChange(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Honorarios en pesos ($)</Label>
+                  <Input type="number" min="0" placeholder="Monto en ARS" value={form.presupuesto_pesos} onChange={e => setForm({ ...form, presupuesto_pesos: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Gastos estimados ($)</Label>
+                <Input type="number" min="0" placeholder="Sellados, tasas, gastos judiciales..." value={form.gastos_estimados} onChange={e => setForm({ ...form, gastos_estimados: e.target.value })} />
+              </div>
+              {(form.presupuesto_pesos || form.gastos_estimados) && (
+                <div className="p-4 rounded-lg bg-accent/10 border border-accent/20 space-y-1">
+                  <p className="text-sm font-medium">Resumen del presupuesto</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Honorarios</span>
+                    <span>{formatPesos(parseFloat(form.presupuesto_pesos) || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Gastos estimados</span>
+                    <span>{formatPesos(parseFloat(form.gastos_estimados) || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold border-t pt-1 mt-1">
+                    <span>Total estimado</span>
+                    <span className="text-primary">{formatPesos((parseFloat(form.presupuesto_pesos) || 0) + (parseFloat(form.gastos_estimados) || 0))}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={!form.client_id && !form.client_name}>
+              {editing ? "Guardar Cambios" : "Crear Consulta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

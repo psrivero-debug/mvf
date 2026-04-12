@@ -1,0 +1,93 @@
+{
+  "name": "Consulta",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string",
+      "description": "N\u00famero o referencia interna de la consulta"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la consulta"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente (referencia r\u00e1pida)"
+    },
+    "tipo_asunto": {
+      "type": "string",
+      "enum": [
+        "civil",
+        "penal",
+        "laboral",
+        "familia",
+        "comercial",
+        "administrativo",
+        "inmobiliario",
+        "otro"
+      ],
+      "description": "Tipo de asunto legal"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "pendiente",
+        "en_proceso",
+        "presupuestada",
+        "aceptada",
+        "cerrada"
+      ],
+      "default": "pendiente",
+      "description": "Estado de la consulta"
+    },
+    "resumen": {
+      "type": "string",
+      "description": "Resumen del caso planteado por el cliente"
+    },
+    "hechos": {
+      "type": "string",
+      "description": "Relato de hechos para los escritos"
+    },
+    "partes": {
+      "type": "string",
+      "description": "Partes involucradas (actor, demandado, testigos, etc.)"
+    },
+    "documentacion": {
+      "type": "string",
+      "description": "Documentaci\u00f3n presentada o requerida"
+    },
+    "jurisdiccion": {
+      "type": "string",
+      "description": "Juzgado o jurisdicci\u00f3n prevista"
+    },
+    "presupuesto_ius": {
+      "type": "number",
+      "description": "Cantidad de IUS presupuestada"
+    },
+    "presupuesto_pesos": {
+      "type": "number",
+      "description": "Honorarios en pesos presupuestados"
+    },
+    "gastos_estimados": {
+      "type": "number",
+      "description": "Gastos administrativos o judiciales estimados"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas internas del estudio"
+    },
+    "case_id": {
+      "type": "string",
+      "description": "Causa judicial vinculada (si ya existe)"
+    }
+  },
+  "required": [
+    "client_name",
+    "fecha"
+  ]
+}

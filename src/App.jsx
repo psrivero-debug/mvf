@@ -15,6 +15,7 @@ import Cases from './pages/Cases';
 import Documents from './pages/Documents';
 import DocumentDrafting from './pages/DocumentDrafting';
 import LegalConsultant from './pages/LegalConsultant';
+import Consultas from './pages/Consultas';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -45,6 +46,7 @@ const AuthenticatedApp = () => {
         <Route path="/documentos" element={<Documents />} />
         <Route path="/redaccion" element={<DocumentDrafting />} />
         <Route path="/consulta" element={<LegalConsultant />} />
+        <Route path="/consultas" element={<Consultas />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />
