@@ -57,6 +57,7 @@ export default function Consultas() {
   const [clientForm, setClientForm] = useState({ full_name: "", phone: "", address: "", ocupacion: "", datos_a_tener_en_cuenta: "" });
   const [tarифаSearch, setTarifaSearch] = useState("");
   const [tarifaCategoryFilter, setTarifaCategoryFilter] = useState("all");
+  const [selectedTarifas, setSelectedTarifas] = useState(new Set());
   const queryClient = useQueryClient();
 
   const { data: consultas = [], isLoading } = useQuery({
@@ -396,37 +397,58 @@ export default function Consultas() {
                       onChange={(e) => setTarifaSearch(e.target.value)}
                       className="text-xs"
                     />
-                    <Select value={tarifaCategoryFilter} onValueChange={setTarifaCategoryFilter}>
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        <SelectItem value="consulta">Consulta</SelectItem>
-                        <SelectItem value="asesoria">Asesoría</SelectItem>
-                        <SelectItem value="defensa">Defensa</SelectItem>
-                        <SelectItem value="redaccion">Redacción</SelectItem>
-                        <SelectItem value="mediacion">Mediación</SelectItem>
-                        <SelectItem value="otro">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select value={tarifaCategoryFilter} onValueChange={setTarifaCategoryFilter}>
+                        <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          <SelectItem value="consulta">Consulta</SelectItem>
+                          <SelectItem value="asesoria">Asesoría</SelectItem>
+                          <SelectItem value="defensa">Defensa</SelectItem>
+                          <SelectItem value="redaccion">Redacción</SelectItem>
+                          <SelectItem value="mediacion">Mediación</SelectItem>
+                          <SelectItem value="otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {selectedTarifas.size > 0 && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setSelectedTarifas(new Set()); handleIusChange(""); }} className="text-xs h-auto px-2">
+                          Limpiar
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                    {tarifas.filter(t => t.activo && (tarифаSearch === "" || t.concepto.toLowerCase().includes(tarифаSearch.toLowerCase()) || t.descripcion?.toLowerCase().includes(tarифаSearch.toLowerCase())) && (tarifaCategoryFilter === "all" || t.categoria === tarifaCategoryFilter)).map(t => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => handleIusChange(t.multiplicador.toString())}
-                        className="w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors flex items-center justify-between gap-2 text-sm"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{t.concepto}</p>
-                          {t.descripcion && <p className="text-xs text-muted-foreground line-clamp-1">{t.descripcion}</p>}
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="font-semibold text-primary text-sm">{t.multiplicador} IUS</p>
-                          {valorBase > 0 && <p className="text-xs text-muted-foreground">{formatPesos(t.multiplicador * valorBase)}</p>}
-                        </div>
-                      </button>
-                    ))}
+                    {tarifas.filter(t => t.activo && (tarифаSearch === "" || t.concepto.toLowerCase().includes(tarифаSearch.toLowerCase()) || t.descripcion?.toLowerCase().includes(tarифаSearch.toLowerCase())) && (tarifaCategoryFilter === "all" || t.categoria === tarifaCategoryFilter)).map(t => {
+                      const isSelected = selectedTarifas.has(t.id);
+                      return (
+                     <div key={t.id} className="px-3 py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm">
+                       <input
+                         type="checkbox"
+                         checked={isSelected}
+                         onChange={(e) => {
+                           const newSelected = new Set(selectedTarifas);
+                           if (e.target.checked) {
+                             newSelected.add(t.id);
+                           } else {
+                             newSelected.delete(t.id);
+                           }
+                           setSelectedTarifas(newSelected);
+                           const totalIus = Array.from(newSelected).reduce((sum, id) => sum + (tarifas.find(tf => tf.id === id)?.multiplicador || 0), 0);
+                           handleIusChange(totalIus > 0 ? totalIus.toString() : "");
+                         }}
+                         className="rounded"
+                       />
+                       <div className="flex-1 min-w-0">
+                         <p className="font-medium truncate">{t.concepto}</p>
+                         {t.descripcion && <p className="text-xs text-muted-foreground line-clamp-1">{t.descripcion}</p>}
+                       </div>
+                       <div className="shrink-0 text-right">
+                         <p className="font-semibold text-primary text-sm">{t.multiplicador} IUS</p>
+                         {valorBase > 0 && <p className="text-xs text-muted-foreground">{formatPesos(t.multiplicador * valorBase)}</p>}
+                       </div>
+                     </div>
+                    );
+                    })}
                   </div>
                 </div>
               )}
