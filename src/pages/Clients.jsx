@@ -13,7 +13,7 @@ import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-
 
 const emptyClient = {
   full_name: "", dni_cuit: "", email: "", phone: "", address: "",
-  client_type: "persona_fisica", notes: "", status: "activo"
+  client_type: "persona_fisica", ocupacion: "", datos_a_tener_en_cuenta: "", notes: "", status: "activo"
 };
 
 export default function Clients() {
@@ -171,6 +171,14 @@ export default function Clients() {
             <div className="grid gap-2">
               <Label>Domicilio</Label>
               <Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Ocupación / Profesión</Label>
+              <Input placeholder="Ej: Comerciante, Empleado, Jubilado..." value={form.ocupacion} onChange={e => setForm({ ...form, ocupacion: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Datos a tener en cuenta</Label>
+              <Textarea placeholder="Información relevante sobre el cliente: antecedentes, situación particular, etc." value={form.datos_a_tener_en_cuenta} onChange={e => setForm({ ...form, datos_a_tener_en_cuenta: e.target.value })} rows={3} />
             </div>
             <div className="grid gap-2">
               <Label>Notas</Label>

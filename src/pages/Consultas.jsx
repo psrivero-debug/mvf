@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search, ClipboardList, User, Calendar, Pencil, Trash2, ChevronDown, ChevronUp, Calculator } from "lucide-react";
+import { Plus, Search, ClipboardList, User, Calendar, Pencil, Trash2, Calculator, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -52,6 +52,8 @@ export default function Consultas() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyConsulta);
   const [tab, setTab] = useState("datos");
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clientForm, setClientForm] = useState({ full_name: "", phone: "", address: "", ocupacion: "", datos_a_tener_en_cuenta: "" });
   const queryClient = useQueryClient();
 
   const { data: consultas = [], isLoading } = useQuery({
@@ -70,6 +72,16 @@ export default function Consultas() {
   });
 
   const valorBase = configs[0]?.valor_base || 0;
+
+  const createClientMutation = useMutation({
+    mutationFn: (data) => base44.entities.Client.create({ ...data, status: "activo", client_type: "persona_fisica" }),
+    onSuccess: (newClient) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      setForm(prev => ({ ...prev, client_id: newClient.id, client_name: newClient.full_name }));
+      setClientDialogOpen(false);
+      setClientForm({ full_name: "", phone: "", address: "", ocupacion: "", datos_a_tener_en_cuenta: "" });
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Consulta.create(data),
@@ -209,6 +221,45 @@ export default function Consultas() {
         </div>
       )}
 
+      {/* Dialog Nuevo Cliente Rápido */}
+      <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Nuevo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>Nombre y Apellido *</Label>
+              <Input placeholder="Ej: Juan Pérez" value={clientForm.full_name} onChange={e => setClientForm({ ...clientForm, full_name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Teléfono</Label>
+                <Input placeholder="Ej: 3424 123456" value={clientForm.phone} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Ocupación</Label>
+                <Input placeholder="Ej: Comerciante" value={clientForm.ocupacion} onChange={e => setClientForm({ ...clientForm, ocupacion: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Domicilio</Label>
+              <Input placeholder="Calle, número, localidad" value={clientForm.address} onChange={e => setClientForm({ ...clientForm, address: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Datos a tener en cuenta</Label>
+              <Textarea placeholder="Información relevante: antecedentes, situación particular, etc." value={clientForm.datos_a_tener_en_cuenta} onChange={e => setClientForm({ ...clientForm, datos_a_tener_en_cuenta: e.target.value })} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClientDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => createClientMutation.mutate(clientForm)} disabled={!clientForm.full_name}>
+              Crear Cliente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -244,12 +295,17 @@ export default function Consultas() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Cliente *</Label>
-                  <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                    <SelectContent>
-                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" title="Nuevo cliente" onClick={() => setClientDialogOpen(true)}>
+                      <UserPlus className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label>Tipo de asunto</Label>

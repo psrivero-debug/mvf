@@ -1,0 +1,58 @@
+{
+  "name": "Client",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Nombre completo del cliente"
+    },
+    "dni_cuit": {
+      "type": "string",
+      "description": "DNI o CUIT del cliente"
+    },
+    "email": {
+      "type": "string",
+      "description": "Correo electr\u00f3nico"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Tel\u00e9fono de contacto"
+    },
+    "address": {
+      "type": "string",
+      "description": "Domicilio"
+    },
+    "client_type": {
+      "type": "string",
+      "enum": [
+        "persona_fisica",
+        "persona_juridica"
+      ],
+      "default": "persona_fisica",
+      "description": "Tipo de cliente"
+    },
+    "ocupacion": {
+      "type": "string",
+      "description": "Ocupaci\u00f3n o profesi\u00f3n del cliente"
+    },
+    "datos_a_tener_en_cuenta": {
+      "type": "string",
+      "description": "Datos relevantes a tener en cuenta sobre el cliente"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas internas sobre el cliente"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "activo",
+        "inactivo"
+      ],
+      "default": "activo"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}
