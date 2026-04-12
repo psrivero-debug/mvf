@@ -651,9 +651,22 @@ export default function Consultas() {
                 <div className="grid gap-2">
                   <Label className="text-xs">Tasas Judiciales (definir monto)</Label>
                   <Input type="number" min="0" step="1" placeholder="Ingresar monto" className="text-xs" onBlur={(e) => { const val = parseFloat(e.target.value); if (val > 0) { setForm({ ...form, gastos_estimados: String((parseFloat(form.gastos_estimados) || 0) + val) }); e.target.value = ""; } }} />
-                </div>
-              </div>
-              {form.presupuesto_pesos && form.client_id && (
+                  </div>
+                  </div>
+                  {form.tipo_asunto && requisitosAsunto[form.tipo_asunto] && (
+                  <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 space-y-2">
+                  <p className="text-sm font-semibold text-orange-900">Documentación requerida para {tipoLabels[form.tipo_asunto]}:</p>
+                  <ul className="text-sm text-orange-800 space-y-1.5">
+                   {requisitosAsunto[form.tipo_asunto].map((req, i) => (
+                     <li key={i} className="flex items-start gap-2">
+                       <span className="text-orange-600 font-bold mt-0.5">✓</span>
+                       <span>{req}</span>
+                     </li>
+                   ))}
+                  </ul>
+                  </div>
+                  )}
+                  {form.presupuesto_pesos && form.client_id && (
                 <Button onClick={handlePrintBudget} className="gap-2 w-full" disabled={saveBudgetMutation.isPending}>
                   <Printer className="w-4 h-4" /> {saveBudgetMutation.isPending ? 'Guardando...' : 'Imprimir y guardar presupuesto'}
                 </Button>
