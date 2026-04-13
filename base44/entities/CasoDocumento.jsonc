@@ -1,0 +1,57 @@
+{
+  "name": "CasoDocumento",
+  "type": "object",
+  "properties": {
+    "caso_id": {
+      "type": "string",
+      "description": "ID del EstudioCaso"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del documento"
+    },
+    "tipo_documento": {
+      "type": "string",
+      "enum": [
+        "escrito",
+        "sentencia",
+        "pericia",
+        "testimonio",
+        "contrato",
+        "imagen",
+        "pdf",
+        "otro"
+      ],
+      "description": "Tipo de documento"
+    },
+    "contenido_texto": {
+      "type": "string",
+      "description": "Texto completo del documento (transcripto o ingresado)"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL del archivo original"
+    },
+    "fuente": {
+      "type": "string",
+      "description": "Origen del documento (juzgado, parte, perito, etc.)"
+    },
+    "fecha_documento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del documento"
+    },
+    "orden": {
+      "type": "number",
+      "default": 0
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas sobre el documento"
+    }
+  },
+  "required": [
+    "caso_id",
+    "titulo"
+  ]
+}

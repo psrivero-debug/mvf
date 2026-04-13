@@ -1,0 +1,39 @@
+{
+  "name": "CasoAnalisis",
+  "type": "object",
+  "properties": {
+    "caso_id": {
+      "type": "string",
+      "description": "ID del EstudioCaso"
+    },
+    "agente": {
+      "type": "string",
+      "enum": [
+        "lector_juridico",
+        "abogado_defensor",
+        "transcriptor",
+        "analista"
+      ],
+      "description": "Agente de IA utilizado"
+    },
+    "consulta": {
+      "type": "string",
+      "description": "Pregunta o instrucci\u00f3n enviada"
+    },
+    "respuesta": {
+      "type": "string",
+      "description": "Respuesta del agente"
+    },
+    "documentos_referenciados": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de documentos citados en el an\u00e1lisis"
+    }
+  },
+  "required": [
+    "caso_id",
+    "agente"
+  ]
+}

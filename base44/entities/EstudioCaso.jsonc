@@ -1,0 +1,68 @@
+{
+  "name": "EstudioCaso",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo o car\u00e1tula del caso"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n general del caso"
+    },
+    "tipo_caso": {
+      "type": "string",
+      "enum": [
+        "civil",
+        "penal",
+        "laboral",
+        "familia",
+        "comercial",
+        "administrativo",
+        "inmobiliario",
+        "otro"
+      ],
+      "description": "Tipo de caso"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "activo",
+        "en_analisis",
+        "archivado"
+      ],
+      "default": "activo"
+    },
+    "jurisdiccion": {
+      "type": "string",
+      "description": "Juzgado o jurisdicci\u00f3n (San Luis)"
+    },
+    "numero_expediente": {
+      "type": "string",
+      "description": "N\u00famero de expediente"
+    },
+    "partes": {
+      "type": "string",
+      "description": "Partes involucradas"
+    },
+    "hechos_resumen": {
+      "type": "string",
+      "description": "Resumen de hechos"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas internas"
+    }
+  },
+  "required": [
+    "titulo"
+  ]
+}
