@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square } from "lucide-react";
+import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square, Clock, Tag, Zap } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import Anotaciones from "./Anotaciones";
 
@@ -93,13 +93,108 @@ INSTRUCCIÓN: ${consulta}
 
 Respondé con el texto redactado o resumen solicitado de forma profesional.`,
   },
+  {
+    id: "cronologista",
+    label: "Cronologista",
+    icon: Clock,
+    color: "bg-teal-100 text-teal-700",
+    borderColor: "border-teal-400",
+    descripcion: "Construye línea de tiempo y cronología de hechos del caso",
+    keywords: ["cronolog", "línea de tiempo", "timeline", "orden", "fechas", "secuencia", "cuando", "cuándo", "histor"],
+    prompt: (consulta, docsTexto) => `Sos un experto en análisis cronológico de causas judiciales argentinas, Provincia de San Luis.
+Tu tarea es construir una línea de tiempo precisa y ordenada de todos los hechos, actos procesales y eventos relevantes del caso.
+
+INSTRUCCIONES:
+- Extraé TODAS las fechas mencionadas en los documentos (fechas de hechos, presentaciones, notificaciones, sentencias, plazos, etc.)
+- Ordenalas cronológicamente de más antigua a más reciente
+- Para cada evento indicá: fecha exacta (o aproximada si no hay exacta), descripción del hecho/acto, fuente documental entre corchetes
+- Marcá con ⚠️ los eventos procesalmente críticos (vencimientos, plazos, notificaciones, resoluciones)
+- Marcá con ⚖️ los actos judiciales formales
+- Marcá con 📄 los escritos y presentaciones de partes
+- Al final, destacá cualquier brecha temporal sospechosa o plazo que pueda ser relevante jurídicamente
+
+DOCUMENTOS DEL CASO:
+${docsTexto}
+
+INSTRUCCIÓN ADICIONAL: ${consulta}
+
+Presentá la línea de tiempo en formato claro, ordenada cronológicamente, con cada evento en una línea separada.`,
+  },
+  {
+    id: "extractor_keywords",
+    label: "Extractor de Keywords",
+    icon: Tag,
+    color: "bg-pink-100 text-pink-700",
+    borderColor: "border-pink-400",
+    descripcion: "Extrae palabras clave, personas, montos y datos críticos",
+    keywords: ["keyword", "palabra", "clave", "persona", "monto", "dato", "nombre", "actor", "demandado", "partes", "número", "importe"],
+    prompt: (consulta, docsTexto) => `Sos un analista forense especializado en extracción de información de documentos jurídicos argentinos, Provincia de San Luis.
+Tu tarea es identificar y extraer sistemáticamente toda la información estructurada relevante del caso.
+
+EXTRAE Y ORGANIZA EN SECCIONES:
+
+1. **PARTES INVOLUCRADAS**: Nombres completos, DNI/CUIT, domicilios, roles (actor, demandado, testigo, perito, juez, fiscal, etc.)
+2. **PALABRAS CLAVE JURÍDICAS**: Términos legales centrales del caso, figuras jurídicas involucradas, artículos citados
+3. **MONTOS Y VALORES**: Todos los montos económicos mencionados, con fecha y contexto
+4. **EXPEDIENTES Y REFERENCIAS**: Números de expediente, resoluciones, tomos, folios, registros
+5. **LUGARES Y JURISDICCIONES**: Domicilios, juzgados, organismos, localidades mencionadas
+6. **HECHOS CENTRALES**: Los 5-10 hechos más importantes del caso en bullets concisos
+7. **CONCEPTOS JURÍDICOS APLICABLES**: Leyes, artículos, jurisprudencia mencionada o aplicable
+8. **CONTRADICCIONES Y ALERTAS**: Datos inconsistentes, contradicciones entre documentos, puntos débiles ⚠️
+
+DOCUMENTOS DEL CASO:
+${docsTexto}
+
+INSTRUCCIÓN ADICIONAL: ${consulta}
+
+Respondé con las secciones bien organizadas y diferenciadas, priorizando exhaustividad y precisión.`,
+  },
+];
+
+// Acciones rápidas predefinidas agrupadas por categoría
+const accionesRapidas = [
+  {
+    categoria: "Análisis",
+    icono: "🔍",
+    acciones: [
+      { label: "Palabras clave y datos críticos", texto: "Extraé todas las palabras clave, partes, montos, expedientes y datos críticos del caso.", agentes: ["extractor_keywords"] },
+      { label: "Inconsistencias y contradicciones", texto: "Identificá todas las inconsistencias, contradicciones y puntos débiles entre los documentos.", agentes: ["lector_juridico", "analista"] },
+      { label: "Puntos fuertes y débiles", texto: "Analizá los puntos fuertes y débiles del caso para cada parte.", agentes: ["analista"] },
+      { label: "Resumen ejecutivo del caso", texto: "Generá un resumen ejecutivo completo del caso con los hechos principales, partes, estado procesal y perspectivas.", agentes: ["lector_juridico", "analista"] },
+    ]
+  },
+  {
+    categoria: "Cronología",
+    icono: "📅",
+    acciones: [
+      { label: "Línea de tiempo completa", texto: "Construí una línea de tiempo cronológica completa con todos los hechos y actos procesales del caso.", agentes: ["cronologista"] },
+      { label: "Plazos procesales críticos", texto: "Identificá todos los plazos procesales, vencimientos y fechas críticas del expediente.", agentes: ["cronologista", "lector_juridico"] },
+      { label: "Secuencia de notificaciones", texto: "Ordená cronológicamente todas las notificaciones, cédulas y comunicaciones del proceso.", agentes: ["cronologista"] },
+    ]
+  },
+  {
+    categoria: "Estrategia",
+    icono: "⚖️",
+    acciones: [
+      { label: "Estrategia de defensa completa", texto: "Desarrollá una estrategia de defensa completa, identificando nulidades, prescripciones y argumentos favorables.", agentes: ["abogado_defensor"] },
+      { label: "Probabilidad de éxito", texto: "Estimá objetivamente la probabilidad de éxito del caso con fundamentos y jurisprudencia.", agentes: ["analista"] },
+      { label: "Análisis integral 360°", texto: "Realizá un análisis integral del caso: extracción de datos, cronología, fortalezas/debilidades y estrategia de defensa.", agentes: ["extractor_keywords", "cronologista", "analista", "abogado_defensor"] },
+    ]
+  },
+  {
+    categoria: "Redacción",
+    icono: "✍️",
+    acciones: [
+      { label: "Borrador de escrito inicial", texto: "Redactá un borrador de escrito judicial inicial basado en los hechos del caso.", agentes: ["transcriptor"] },
+      { label: "Resumen para cliente", texto: "Redactá un resumen claro y sin tecnicismos del estado del caso para explicarle al cliente.", agentes: ["transcriptor"] },
+    ]
+  },
 ];
 
 function sugerirAgentes(consulta) {
   if (!consulta || consulta.trim().length < 5) return [];
   const lower = consulta.toLowerCase();
   const sugeridos = agentes.filter(a => a.keywords.some(kw => lower.includes(kw))).map(a => a.id);
-  // Si no hay sugerencia clara, sugerir todos
   return sugeridos.length > 0 ? sugeridos : agentes.map(a => a.id);
 }
 
@@ -107,7 +202,8 @@ export default function AgenteIA({ caso, documentos }) {
   const [agentesSeleccionados, setAgentesSeleccionados] = useState(["lector_juridico"]);
   const [consulta, setConsulta] = useState("");
   const [docsSeleccionados, setDocsSeleccionados] = useState([]);
-  const [consultandoIdx, setConsultandoIdx] = useState(null); // qué agente está procesando ahora
+  const [consultandoIdx, setConsultandoIdx] = useState(null);
+  const [isPending, setIsPending] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: analisis = [] } = useQuery({
@@ -137,21 +233,23 @@ export default function AgenteIA({ caso, documentos }) {
     setDocsSeleccionados(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]);
   };
 
-  const [isPending, setIsPending] = useState(false);
+  const aplicarAccionRapida = (accion) => {
+    setConsulta(accion.texto);
+    setAgentesSeleccionados(accion.agentes);
+  };
 
-  const handleConsultar = async () => {
-    if (!consulta.trim() || isPending) return;
+  const ejecutarConsulta = async (consultaTexto, agentesIds) => {
+    if (!consultaTexto.trim() || isPending) return;
     setIsPending(true);
     const docsUsados = documentos.filter(d => docsSeleccionados.length === 0 || docsSeleccionados.includes(d.id));
     const docsTexto = docsUsados.length > 0
       ? docsUsados.map(d => `--- DOCUMENTO: "${d.titulo}" (Fuente: ${d.fuente || "No especificada"}, Fecha: ${d.fecha_documento || "No especificada"}) ---\n${d.contenido_texto || "(Sin texto)"}`).join("\n\n")
       : "(No hay documentos con texto disponibles en el caso)";
 
-    for (let i = 0; i < agentesSeleccionados.length; i++) {
-      const agenteId = agentesSeleccionados[i];
+    for (const agenteId of agentesIds) {
       setConsultandoIdx(agenteId);
       const agenteConfig = agentes.find(a => a.id === agenteId);
-      const promptFinal = agenteConfig.prompt(consulta, docsTexto);
+      const promptFinal = agenteConfig.prompt(consultaTexto, docsTexto);
       const respuesta = await base44.integrations.Core.InvokeLLM({
         prompt: promptFinal,
         model: "claude_sonnet_4_6",
@@ -159,7 +257,7 @@ export default function AgenteIA({ caso, documentos }) {
       await base44.entities.CasoAnalisis.create({
         caso_id: caso.id,
         agente: agenteId,
-        consulta,
+        consulta: consultaTexto,
         respuesta,
         documentos_referenciados: docsSeleccionados,
       });
@@ -171,10 +269,43 @@ export default function AgenteIA({ caso, documentos }) {
     setConsulta("");
   };
 
+  const handleConsultar = () => ejecutarConsulta(consulta, agentesSeleccionados);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-5">
+
+        {/* ACCIONES RÁPIDAS */}
+        <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-accent" />
+            <span className="text-sm font-semibold">Acciones rápidas</span>
+            <span className="text-xs text-muted-foreground">· Click para usar</span>
+          </div>
+          <div className="space-y-3">
+            {accionesRapidas.map(grupo => (
+              <div key={grupo.categoria}>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">{grupo.icono} {grupo.categoria}</p>
+                <div className="flex flex-wrap gap-2">
+                  {grupo.acciones.map(accion => (
+                    <button
+                      key={accion.label}
+                      onClick={() => aplicarAccionRapida(accion)}
+                      disabled={isPending}
+                      className="px-3 py-1.5 rounded-lg text-xs border border-border bg-background hover:border-primary/50 hover:bg-primary/5 transition-all text-left disabled:opacity-40"
+                    >
+                      {accion.label}
+                      {accion.agentes.length > 1 && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">({accion.agentes.length} agentes)</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Selector de agentes (múltiple) */}
         <div>
@@ -182,25 +313,21 @@ export default function AgenteIA({ caso, documentos }) {
             <Label className="text-xs text-muted-foreground uppercase tracking-wide">
               Agentes a consultar ({agentesSeleccionados.length} seleccionado{agentesSeleccionados.length !== 1 ? "s" : ""})
             </Label>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {consulta.trim().length >= 5 && (
                 <button
                   onClick={handleSugerir}
                   className="flex items-center gap-1 text-xs text-primary hover:underline"
-                  title="Sugerir agentes según la consulta"
                 >
                   <Sparkles className="w-3 h-3" /> Sugerir
                 </button>
               )}
-              <button
-                onClick={seleccionarTodos}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
-              >
+              <button onClick={seleccionarTodos} className="text-xs text-muted-foreground hover:text-foreground underline">
                 Todos
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
             {agentes.map(({ id, label, icon: Icon, color, borderColor, descripcion }) => {
               const selected = agentesSeleccionados.includes(id);
               const isSugerido = sugeridos.includes(id) && consulta.trim().length >= 5;
@@ -208,28 +335,24 @@ export default function AgenteIA({ caso, documentos }) {
                 <button
                   key={id}
                   onClick={() => toggleAgente(id)}
-                  className={`p-3 rounded-xl border-2 text-left transition-all relative ${
-                    selected
-                      ? `${borderColor} bg-primary/5`
-                      : "border-border hover:border-primary/40"
+                  className={`p-2.5 rounded-xl border-2 text-left transition-all relative ${
+                    selected ? `${borderColor} bg-primary/5` : "border-border hover:border-primary/40"
                   }`}
                 >
                   {isSugerido && !selected && (
-                    <span className="absolute top-1.5 right-1.5 text-[9px] bg-accent text-accent-foreground px-1 rounded font-semibold">✨ sugerido</span>
+                    <span className="absolute top-1.5 right-1.5 text-[9px] bg-accent text-accent-foreground px-1 rounded font-semibold">✨</span>
                   )}
-                  <div className="flex items-start justify-between mb-2">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
-                      <Icon className="w-4 h-4" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${color}`}>
+                      <Icon className="w-3 h-3" />
                     </div>
-                    <div className="mt-0.5">
-                      {selected
-                        ? <CheckSquare className="w-4 h-4 text-primary" />
-                        : <Square className="w-4 h-4 text-muted-foreground/40" />
-                      }
-                    </div>
+                    {selected
+                      ? <CheckSquare className="w-3.5 h-3.5 text-primary ml-auto" />
+                      : <Square className="w-3.5 h-3.5 text-muted-foreground/30 ml-auto" />
+                    }
                   </div>
-                  <p className="font-medium text-sm leading-tight">{label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{descripcion}</p>
+                  <p className="font-medium text-xs leading-tight">{label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{descripcion}</p>
                 </button>
               );
             })}
@@ -237,7 +360,7 @@ export default function AgenteIA({ caso, documentos }) {
           {agentesSeleccionados.length > 1 && (
             <p className="text-xs text-primary/70 mt-2 flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
-              Se consultarán {agentesSeleccionados.length} agentes en secuencia y cada respuesta se guardará por separado.
+              Se consultarán {agentesSeleccionados.length} agentes en secuencia.
             </p>
           )}
         </div>
@@ -246,7 +369,7 @@ export default function AgenteIA({ caso, documentos }) {
         {documentos.length > 0 && (
           <div>
             <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-              Documentos a analizar ({docsSeleccionados.length === 0 ? "todos" : `${docsSeleccionados.length} seleccionados`})
+              Documentos ({docsSeleccionados.length === 0 ? "todos" : `${docsSeleccionados.length} seleccionados`})
             </Label>
             <div className="flex flex-wrap gap-2 mt-2">
               {documentos.map(doc => (
@@ -270,18 +393,14 @@ export default function AgenteIA({ caso, documentos }) {
         {/* Área de consulta */}
         <div className="space-y-3">
           <Textarea
-            placeholder={`Escribí tu consulta... Ej: "¿Cuáles son los puntos más importantes?" / "Identificá inconsistencias" / "Redactá un escrito de apelación"`}
+            placeholder={`Escribí tu consulta personalizada o usá una acción rápida de arriba... (Ctrl+Enter para enviar)`}
             value={consulta}
             onChange={e => setConsulta(e.target.value)}
             rows={3}
             onKeyDown={e => { if (e.key === "Enter" && e.ctrlKey) handleConsultar(); }}
           />
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handleConsultar}
-              disabled={!consulta.trim() || isPending}
-              className="gap-2"
-            >
+            <Button onClick={handleConsultar} disabled={!consulta.trim() || isPending} className="gap-2">
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {isPending
                 ? `Consultando ${agentes.find(a => a.id === consultandoIdx)?.label || ""}...`
@@ -290,7 +409,7 @@ export default function AgenteIA({ caso, documentos }) {
             </Button>
             {isPending && (
               <p className="text-xs text-muted-foreground animate-pulse">
-                {agentesSeleccionados.indexOf(consultandoIdx) + 1}/{agentesSeleccionados.length} · {agentes.find(a => a.id === consultandoIdx)?.label} analizando...
+                {agentesSeleccionados.indexOf(consultandoIdx) + 1}/{agentesSeleccionados.length} · {agentes.find(a => a.id === consultandoIdx)?.label}...
               </p>
             )}
           </div>
@@ -329,7 +448,7 @@ export default function AgenteIA({ caso, documentos }) {
         {analisis.length === 0 && !isPending && (
           <div className="text-center py-8 border-2 border-dashed rounded-xl">
             <Bot className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">Hacé tu primera consulta al agente de IA</p>
+            <p className="text-sm text-muted-foreground">Usá una acción rápida o escribí tu consulta</p>
             <p className="text-xs text-muted-foreground/70 mt-1">Podés seleccionar uno o varios agentes a la vez</p>
           </div>
         )}
