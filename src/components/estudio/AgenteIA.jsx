@@ -610,9 +610,18 @@ export default function AgenteIA({ caso, documentos }) {
           </div>
         )}
 
-        {/* Escala de favor */}
+        {/* Escala de favor con botón calcular */}
         <div className="p-4 rounded-lg border bg-muted/30">
-          <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-3 block">Escala de favor en el caso</Label>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Escala de favor en el caso</Label>
+            <Button 
+              onClick={() => ejecutarConsulta("Realizá un análisis completo del caso considerando el balance actual.", ["analista"])}
+              disabled={isPending}
+              className="gap-2 bg-purple-600 hover:bg-purple-700 text-xs h-7"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Calcular
+            </Button>
+          </div>
           <EscalaFavor valor={escalaFavor} onChange={setEscalaFavor} />
         </div>
 
@@ -637,15 +646,6 @@ export default function AgenteIA({ caso, documentos }) {
                 : `Consultar${agentesSeleccionados.length > 1 ? ` (${agentesSeleccionados.length} agentes)` : ""}`
               }
             </Button>
-            {agentesSeleccionados.includes("analista") && (
-              <Button 
-                onClick={() => ejecutarConsulta("Realizá un análisis completo del caso considerando el balance actual.", ["analista"])}
-                disabled={isPending}
-                className="gap-2 bg-purple-600 hover:bg-purple-700"
-              >
-                <Sparkles className="w-4 h-4" /> Calcular
-              </Button>
-            )}
             {isPending && (
               <p className="text-xs text-muted-foreground animate-pulse">
                 {agentesSeleccionados.indexOf(consultandoIdx) + 1}/{agentesSeleccionados.length} · {agentes.find(a => a.id === consultandoIdx)?.label}...
