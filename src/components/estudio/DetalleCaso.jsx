@@ -2,18 +2,20 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Bot, BookOpen } from "lucide-react";
+import { ArrowLeft, FileText, Bot, BookOpen, List } from "lucide-react";
 import DocumentosList from "./DocumentosList";
 import AgenteIA from "./AgenteIA";
 import ExportarCaso from "./ExportarCaso";
+import IndiceCaso from "./IndiceCaso";
 
 const tabs = [
+  { id: "indice", label: "Índice", icon: List },
   { id: "documentos", label: "Documentos", icon: FileText },
   { id: "agentes", label: "Agentes IA", icon: Bot },
 ];
 
 export default function DetalleCaso({ caso, onBack }) {
-  const [activeTab, setActiveTab] = useState("documentos");
+  const [activeTab, setActiveTab] = useState("indice");
 
   const { data: documentos = [] } = useQuery({
     queryKey: ["caso_documentos", caso.id],
@@ -70,13 +72,14 @@ export default function DetalleCaso({ caso, onBack }) {
           >
             <Icon className="w-4 h-4" />
             {label}
-            {id === "documentos" && documentos.length > 0 && (
+            {(id === "documentos" || id === "indice") && documentos.length > 0 && (
               <span className="ml-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{documentos.length}</span>
             )}
           </button>
         ))}
       </div>
 
+      {activeTab === "indice" && <IndiceCaso documentos={documentos} />}
       {activeTab === "documentos" && <DocumentosList caso={caso} documentos={documentos} />}
       {activeTab === "agentes" && <AgenteIA caso={caso} documentos={documentos} />}
     </div>
