@@ -195,7 +195,7 @@ export default function IndiceCaso({ documentos }) {
     if (resultado) {
       let contenido_texto = resultado.contenido;
       // Si el texto es muy largo, subirlo como archivo y guardar solo la URL
-      if (contenido_texto && contenido_texto.length > 30000) {
+      if (contenido_texto && contenido_texto.length > 8000) {
         const blob = new Blob([contenido_texto], { type: "text/plain" });
         const file = new File([blob], `doc_${doc.id}.txt`, { type: "text/plain" });
         const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file });
