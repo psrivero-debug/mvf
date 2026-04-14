@@ -1,0 +1,29 @@
+{
+  "name": "CasoAnotacion",
+  "type": "object",
+  "properties": {
+    "caso_id": {
+      "type": "string",
+      "description": "ID del EstudioCaso"
+    },
+    "texto": {
+      "type": "string",
+      "description": "Texto de la anotaci\u00f3n o nota r\u00e1pida"
+    },
+    "etiqueta": {
+      "type": "string",
+      "enum": [
+        "nota",
+        "importante",
+        "pendiente",
+        "recordatorio"
+      ],
+      "default": "nota",
+      "description": "Tipo de anotaci\u00f3n"
+    }
+  },
+  "required": [
+    "caso_id",
+    "texto"
+  ]
+}

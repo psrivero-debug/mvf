@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import Anotaciones from "./Anotaciones";
 
 const agentes = [
   {
@@ -144,7 +145,9 @@ export default function AgenteIA({ caso, documentos }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Columna principal: Agente IA */}
+      <div className="lg:col-span-2 space-y-6">
       {/* Selector de agente */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {agentes.map(({ id, label, icon: Icon, color, descripcion }) => (
@@ -253,6 +256,12 @@ export default function AgenteIA({ caso, documentos }) {
           <p className="text-xs text-muted-foreground/70 mt-1">El análisis se guardará automáticamente</p>
         </div>
       )}
+      </div>
+
+      {/* Columna lateral: Anotaciones */}
+      <div className="lg:border-l lg:pl-6">
+        <Anotaciones caso={caso} />
+      </div>
     </div>
   );
 }
