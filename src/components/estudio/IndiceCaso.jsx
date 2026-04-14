@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FileText, Calendar, ArrowUpDown, ChevronDown, ChevronRight, Loader2, BookOpen } from "lucide-react";
+import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
@@ -20,21 +20,34 @@ const tipoColors = {
   pdf: "bg-red-100 text-red-700", otro: "bg-gray-100 text-gray-600",
 };
 
+// Genera resumen de un doc con IA
+async function generarResumen(doc) {
+  if (!doc.contenido_texto || doc.contenido_texto.trim().length < 30) return null;
+  const resultado = await base44.integrations.Core.InvokeLLM({
+    prompt: `Resumí en 2-3 oraciones breves y precisas el contenido de este documento jurídico. 
+Indicá: qué tipo de acto o documento es, quiénes intervienen (si se mencionan) y cuál es su objeto o resolución principal.
+Sé conciso y directo. No uses frases como "El documento..." o "Este texto...". Empezá directo con el contenido.
+
+TEXTO:
+${doc.contenido_texto.slice(0, 3000)}`,
+  });
+  return resultado || null;
+}
+
 export default function IndiceCaso({ documentos }) {
   const [search, setSearch] = useState("");
   const [tipoFilter, setTipoFilter] = useState("all");
   const [sortBy, setSortBy] = useState("orden");
-  const [expandedId, setExpandedId] = useState(null);
-  // secciones[docId] = { loading: bool, items: string[] }
-  const [secciones, setSecciones] = useState({});
+  // resumenes[docId] = { loading: bool, text: string | null }
+  const [resumenes, setResumenes] = useState({});
+  const [generandoTodos, setGenerandoTodos] = useState(false);
 
   const filtered = documentos
     .filter(d => {
       const matchSearch =
         d.titulo?.toLowerCase().includes(search.toLowerCase()) ||
         d.fuente?.toLowerCase().includes(search.toLowerCase()) ||
-        d.notas?.toLowerCase().includes(search.toLowerCase()) ||
-        (secciones[d.id]?.items || []).some(s => s.toLowerCase().includes(search.toLowerCase()));
+        resumenes[d.id]?.text?.toLowerCase().includes(search.toLowerCase());
       const matchTipo = tipoFilter === "all" || d.tipo_documento === tipoFilter;
       return matchSearch && matchTipo;
     })
@@ -53,43 +66,30 @@ export default function IndiceCaso({ documentos }) {
       return (a.orden ?? 0) - (b.orden ?? 0);
     });
 
-  const toggleExpand = async (doc) => {
-    const docId = doc.id;
-    if (expandedId === docId) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(docId);
-
-    // Si ya tenemos secciones, no volver a cargar
-    if (secciones[docId]) return;
-
-    // Si no hay texto, no hay nada que extraer
-    if (!doc.contenido_texto || doc.contenido_texto.trim().length < 50) {
-      setSecciones(prev => ({ ...prev, [docId]: { loading: false, items: [] } }));
-      return;
-    }
-
-    setSecciones(prev => ({ ...prev, [docId]: { loading: true, items: [] } }));
-
-    const resultado = await base44.integrations.Core.InvokeLLM({
-      prompt: `Analizá el siguiente texto de un documento jurídico y extraé una lista de los títulos, secciones o apartados principales que aparecen en él.
-Devolvé ÚNICAMENTE los nombres/títulos de las secciones, uno por línea, sin numeración ni bullets. 
-Si el texto no tiene secciones claras, extraé las frases clave o los temas principales que se tratan (máximo 8).
-No incluyas explicaciones, solo los títulos/secciones.
-
-TEXTO DEL DOCUMENTO:
-${doc.contenido_texto.slice(0, 3000)}`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          secciones: { type: "array", items: { type: "string" } }
-        }
+  // Auto-generar resúmenes de docs con texto al cargar
+  useEffect(() => {
+    documentos.forEach(doc => {
+      if (doc.contenido_texto && doc.contenido_texto.trim().length >= 30 && !resumenes[doc.id]) {
+        setResumenes(prev => ({ ...prev, [doc.id]: { loading: true, text: null } }));
+        generarResumen(doc).then(text => {
+          setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+        });
       }
     });
+  }, [documentos]);
 
-    const items = resultado?.secciones || [];
-    setSecciones(prev => ({ ...prev, [docId]: { loading: false, items } }));
+  const handleGenerarTodos = async () => {
+    const sinResumen = documentos.filter(
+      d => d.contenido_texto && d.contenido_texto.trim().length >= 30 && !resumenes[d.id]?.text
+    );
+    if (!sinResumen.length) return;
+    setGenerandoTodos(true);
+    for (const doc of sinResumen) {
+      setResumenes(prev => ({ ...prev, [doc.id]: { loading: true, text: null } }));
+      const text = await generarResumen(doc);
+      setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+    }
+    setGenerandoTodos(false);
   };
 
   if (documentos.length === 0) {
@@ -109,7 +109,7 @@ ${doc.contenido_texto.slice(0, 3000)}`,
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título, fuente, secciones..."
+            placeholder="Buscar por título, fuente, resumen..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-10 h-9"
@@ -140,82 +140,77 @@ ${doc.contenido_texto.slice(0, 3000)}`,
         </Select>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Mostrando <strong>{filtered.length}</strong> de <strong>{documentos.length}</strong> documentos · Hacé clic en una fila para ver sus secciones internas
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          <strong>{filtered.length}</strong> de <strong>{documentos.length}</strong> documentos
+        </p>
+        {documentos.some(d => d.contenido_texto && !resumenes[d.id]?.text && !resumenes[d.id]?.loading) && (
+          <Button size="sm" variant="outline" className="gap-2 text-xs h-7" onClick={handleGenerarTodos} disabled={generandoTodos}>
+            {generandoTodos ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+            Generar resúmenes faltantes
+          </Button>
+        )}
+      </div>
 
-      {/* Lista expandible */}
+      {/* Tabla de índice */}
       <div className="border rounded-xl overflow-hidden divide-y">
         {filtered.map((doc, idx) => {
-          const isExpanded = expandedId === doc.id;
-          const sec = secciones[doc.id];
+          const res = resumenes[doc.id];
           return (
-            <div key={doc.id}>
-              {/* Fila principal */}
-              <button
-                onClick={() => toggleExpand(doc)}
-                className="w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors flex items-center gap-3"
-              >
-                <span className="text-xs font-mono text-muted-foreground w-6 shrink-0">{idx + 1}</span>
-                {isExpanded
-                  ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                  : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-                <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
+            <div key={doc.id} className="px-4 py-4 hover:bg-muted/20 transition-colors">
+              <div className="flex items-start gap-3">
+                {/* Número */}
+                <span className="text-xs font-mono text-muted-foreground w-6 shrink-0 mt-0.5">{idx + 1}</span>
+                <FileText className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+
+                <div className="flex-1 min-w-0 space-y-1">
+                  {/* Título + tipo + fecha */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-sm">{doc.titulo}</span>
+                    <span className="font-semibold text-sm">{doc.titulo}</span>
                     {doc.tipo_documento && (
                       <Badge className={`${tipoColors[doc.tipo_documento]} text-xs py-0`} variant="secondary">
                         {tipoLabels[doc.tipo_documento]}
                       </Badge>
                     )}
-                  </div>
-                  <div className="flex flex-wrap gap-3 mt-0.5 text-xs text-muted-foreground">
-                    {doc.fuente && <span>{doc.fuente}</span>}
                     {doc.fecha_documento && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(doc.fecha_documento), "d MMM yyyy", { locale: es })}
+                        {format(new Date(doc.fecha_documento), "d 'de' MMMM yyyy", { locale: es })}
                       </span>
                     )}
                   </div>
-                </div>
-                {doc.contenido_texto && (
-                  <span className="text-xs text-primary hidden sm:inline shrink-0">Ver secciones</span>
-                )}
-              </button>
 
-              {/* Secciones expandidas */}
-              {isExpanded && (
-                <div className="px-14 py-3 bg-muted/20 border-t">
-                  {sec?.loading ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Extrayendo secciones con IA...
-                    </div>
-                  ) : sec?.items?.length > 0 ? (
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-                        <BookOpen className="w-3 h-3" /> Secciones / Temas del documento
-                      </p>
-                      <ul className="space-y-1">
-                        {sec.items.map((s, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <span className="text-primary font-medium shrink-0 mt-0.5">·</span>
-                            <span>{s}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : doc.contenido_texto ? (
-                    <p className="text-xs text-muted-foreground py-1">No se encontraron secciones claras en este documento.</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground py-1">Este documento no tiene texto. Transcribilo con IA para habilitar esta función.</p>
+                  {/* Fuente */}
+                  {doc.fuente && (
+                    <p className="text-xs text-muted-foreground">Fuente: {doc.fuente}</p>
                   )}
+
+                  {/* Resumen */}
+                  {res?.loading ? (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Generando resumen...
+                    </div>
+                  ) : res?.text ? (
+                    <p className="text-sm text-foreground/80 leading-relaxed mt-1">{res.text}</p>
+                  ) : !doc.contenido_texto ? (
+                    <p className="text-xs text-muted-foreground/60 italic mt-1">Sin texto transcripto — subí el archivo y transcribilo con IA</p>
+                  ) : null}
+
+                  {/* Notas */}
                   {doc.notas && (
-                    <p className="text-xs text-muted-foreground italic mt-2 border-t pt-2">Nota: {doc.notas}</p>
+                    <p className="text-xs text-muted-foreground italic">{doc.notas}</p>
                   )}
                 </div>
-              )}
+
+                {/* Ver archivo */}
+                {doc.file_url && (
+                  <Button size="sm" variant="ghost" asChild className="shrink-0 mt-0.5">
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                      <Eye className="w-3.5 h-3.5" />
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
