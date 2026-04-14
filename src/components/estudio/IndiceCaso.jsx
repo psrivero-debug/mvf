@@ -21,7 +21,6 @@ const tipoColors = {
   pdf: "bg-red-100 text-red-700", otro: "bg-gray-100 text-gray-600",
 };
 
-// Genera resumen de un doc con IA
 async function generarResumen(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 30) return null;
   const resultado = await base44.integrations.Core.InvokeLLM({
@@ -39,10 +38,11 @@ export default function IndiceCaso({ documentos }) {
   const [search, setSearch] = useState("");
   const [tipoFilter, setTipoFilter] = useState("all");
   const [sortBy, setSortBy] = useState("orden");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [resumenes, setResumenes] = useState({});
   const [generandoTodos, setGenerandoTodos] = useState(false);
-  // editando[docId] = string (nuevo título)
-  const [editando, setEditando] = useState({});
+  const [editando, setEditando] = useState({}); // { docId: { titulo, fecha_documento } }
   const queryClient = useQueryClient();
 
   const filtered = documentos
@@ -52,7 +52,9 @@ export default function IndiceCaso({ documentos }) {
         d.fuente?.toLowerCase().includes(search.toLowerCase()) ||
         resumenes[d.id]?.text?.toLowerCase().includes(search.toLowerCase());
       const matchTipo = tipoFilter === "all" || d.tipo_documento === tipoFilter;
-      return matchSearch && matchTipo;
+      const matchDesde = !fechaDesde || (d.fecha_documento && d.fecha_documento >= fechaDesde);
+      const matchHasta = !fechaHasta || (d.fecha_documento && d.fecha_documento <= fechaHasta);
+      return matchSearch && matchTipo && matchDesde && matchHasta;
     })
     .sort((a, b) => {
       if (sortBy === "fecha") {
@@ -69,12 +71,11 @@ export default function IndiceCaso({ documentos }) {
       return (a.orden ?? 0) - (b.orden ?? 0);
     });
 
-  // Auto-generar resúmenes de docs con texto al cargar
   useEffect(() => {
     documentos.forEach(doc => {
       if (doc.contenido_texto && doc.contenido_texto.trim().length >= 30) {
         setResumenes(prev => {
-          if (prev[doc.id]) return prev; // ya existe, no tocar
+          if (prev[doc.id]) return prev;
           const next = { ...prev, [doc.id]: { loading: true, text: null } };
           generarResumen(doc).then(text => {
             setResumenes(p => ({ ...p, [doc.id]: { loading: false, text } }));
@@ -99,13 +100,25 @@ export default function IndiceCaso({ documentos }) {
     setGenerandoTodos(false);
   };
 
-  const guardarTitulo = async (doc) => {
-    const nuevoTitulo = editando[doc.id]?.trim();
-    if (nuevoTitulo && nuevoTitulo !== doc.titulo) {
-      await base44.entities.CasoDocumento.update(doc.id, { titulo: nuevoTitulo });
+  const abrirEdicion = (doc) => {
+    setEditando(prev => ({ ...prev, [doc.id]: { titulo: doc.titulo || "", fecha_documento: doc.fecha_documento || "" } }));
+  };
+
+  const cancelarEdicion = (docId) => {
+    setEditando(prev => { const n = { ...prev }; delete n[docId]; return n; });
+  };
+
+  const guardarCambios = async (doc) => {
+    const cambios = editando[doc.id];
+    if (!cambios) return;
+    const updates = {};
+    if (cambios.titulo.trim() && cambios.titulo.trim() !== doc.titulo) updates.titulo = cambios.titulo.trim();
+    if (cambios.fecha_documento !== doc.fecha_documento) updates.fecha_documento = cambios.fecha_documento || null;
+    if (Object.keys(updates).length > 0) {
+      await base44.entities.CasoDocumento.update(doc.id, updates);
       queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
     }
-    setEditando(prev => { const n = {...prev}; delete n[doc.id]; return n; });
+    cancelarEdicion(doc.id);
   };
 
   if (documentos.length === 0) {
@@ -120,9 +133,9 @@ export default function IndiceCaso({ documentos }) {
 
   return (
     <div className="space-y-4">
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+      {/* Filtros principales */}
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por título, fuente, resumen..."
@@ -156,6 +169,26 @@ export default function IndiceCaso({ documentos }) {
         </Select>
       </div>
 
+      {/* Filtro por rango de fechas */}
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-muted/40 border">
+        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <Calendar className="w-3.5 h-3.5" /> Filtrar por fecha:
+        </span>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground">Desde</label>
+          <Input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="h-7 text-xs w-36" />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground">Hasta</label>
+          <Input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="h-7 text-xs w-36" />
+        </div>
+        {(fechaDesde || fechaHasta) && (
+          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => { setFechaDesde(""); setFechaHasta(""); }}>
+            <X className="w-3 h-3" /> Limpiar
+          </Button>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
           <strong>{filtered.length}</strong> de <strong>{documentos.length}</strong> documentos
@@ -172,58 +205,78 @@ export default function IndiceCaso({ documentos }) {
       <div className="border rounded-xl overflow-hidden divide-y">
         {filtered.map((doc, idx) => {
           const res = resumenes[doc.id];
+          const edit = editando[doc.id];
           return (
             <div key={doc.id} className="px-4 py-4 hover:bg-muted/20 transition-colors">
               <div className="flex items-start gap-3">
-                {/* Número */}
                 <span className="text-xs font-mono text-muted-foreground w-6 shrink-0 mt-0.5">{idx + 1}</span>
                 <FileText className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
 
                 <div className="flex-1 min-w-0 space-y-1">
-                  {/* Título + tipo + fecha */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {editando[doc.id] !== undefined ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={editando[doc.id]}
-                          onChange={e => setEditando(prev => ({ ...prev, [doc.id]: e.target.value }))}
-                          className="h-7 text-sm w-64"
-                          autoFocus
-                          onKeyDown={e => {
-                            if (e.key === "Enter") guardarTitulo(doc);
-                            if (e.key === "Escape") setEditando(prev => { const n = {...prev}; delete n[doc.id]; return n; });
-                          }}
-                        />
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600" onClick={() => guardarTitulo(doc)}>
-                          <Check className="w-3.5 h-3.5" />
+                  {edit ? (
+                    /* Modo edición */
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <label className="text-xs text-muted-foreground w-12">Título:</label>
+                          <Input
+                            value={edit.titulo}
+                            onChange={e => setEditando(prev => ({ ...prev, [doc.id]: { ...prev[doc.id], titulo: e.target.value } }))}
+                            className="h-7 text-sm w-72"
+                            autoFocus
+                            onKeyDown={e => { if (e.key === "Enter") guardarCambios(doc); if (e.key === "Escape") cancelarEdicion(doc.id); }}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <label className="text-xs text-muted-foreground w-12">Fecha:</label>
+                          <Input
+                            type="date"
+                            value={edit.fecha_documento}
+                            onChange={e => setEditando(prev => ({ ...prev, [doc.id]: { ...prev[doc.id], fecha_documento: e.target.value } }))}
+                            className="h-7 text-xs w-36"
+                          />
+                        </div>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 gap-1 text-xs" onClick={() => guardarCambios(doc)}>
+                          <Check className="w-3.5 h-3.5" /> Guardar
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setEditando(prev => { const n = {...prev}; delete n[doc.id]; return n; })}>
-                          <X className="w-3.5 h-3.5" />
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-muted-foreground text-xs" onClick={() => cancelarEdicion(doc.id)}>
+                          <X className="w-3.5 h-3.5" /> Cancelar
                         </Button>
                       </div>
-                    ) : (
+                    </div>
+                  ) : (
+                    /* Modo visualización */
+                    <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-1 group/titulo">
                         <span className="font-semibold text-sm">{doc.titulo}</span>
                         <button
-                          onClick={() => setEditando(prev => ({ ...prev, [doc.id]: doc.titulo }))}
+                          onClick={() => abrirEdicion(doc)}
                           className="opacity-0 group-hover/titulo:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                          title="Editar título y fecha"
                         >
                           <Pencil className="w-3 h-3 text-muted-foreground" />
                         </button>
                       </div>
-                    )}
-                    {doc.tipo_documento && (
-                      <Badge className={`${tipoColors[doc.tipo_documento]} text-xs py-0`} variant="secondary">
-                        {tipoLabels[doc.tipo_documento]}
-                      </Badge>
-                    )}
-                    {doc.fecha_documento && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {format(new Date(doc.fecha_documento), "d 'de' MMMM yyyy", { locale: es })}
-                      </span>
-                    )}
-                  </div>
+                      {doc.tipo_documento && (
+                        <Badge className={`${tipoColors[doc.tipo_documento]} text-xs py-0`} variant="secondary">
+                          {tipoLabels[doc.tipo_documento]}
+                        </Badge>
+                      )}
+                      {doc.fecha_documento ? (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(doc.fecha_documento), "d 'de' MMMM yyyy", { locale: es })}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => abrirEdicion(doc)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground/50 italic hover:text-muted-foreground transition-colors"
+                        >
+                          <Calendar className="w-3 h-3" /> Sin fecha — click para agregar
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Fuente */}
                   {doc.fuente && (
