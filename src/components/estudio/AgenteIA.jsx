@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -222,8 +222,10 @@ const accionesRapidas = [
   },
 ];
 
-function RespuestaAnalisis({ respuesta }) {
+function RespuestaAnalisis({ respuesta, caso, agente }) {
   const [texto, setTexto] = useState(null);
+  const [textoSeleccionado, setTextoSeleccionado] = useState("");
+  const textRef = useRef(null);
 
   useEffect(() => {
     if (!respuesta) return;
@@ -234,11 +236,96 @@ function RespuestaAnalisis({ respuesta }) {
     }
   }, [respuesta]);
 
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection().toString().trim();
+      setTextoSeleccionado(selection);
+    };
+    document.addEventListener("mouseup", handleSelectionChange);
+    document.addEventListener("touchend", handleSelectionChange);
+    return () => {
+      document.removeEventListener("mouseup", handleSelectionChange);
+      document.removeEventListener("touchend", handleSelectionChange);
+    };
+  }, []);
+
   if (!texto) return <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3"><Loader2 className="w-3 h-3 animate-spin" /> Cargando respuesta...</div>;
 
   return (
-    <div className="prose prose-sm max-w-none text-sm border-t pt-3">
-      <ReactMarkdown>{texto}</ReactMarkdown>
+    <div className="border-t pt-3">
+      {textoSeleccionado && (
+        <div className="mb-3 p-2 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-between">
+          <span className="text-xs text-accent">{textoSeleccionado.length} caracteres seleccionados</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1 text-xs text-accent hover:text-accent/80"
+            onClick={() => {
+              const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+              const w = window.open("", "_blank");
+              w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                <style>
+                  * { margin: 0; padding: 0; }
+                  body { font-family: 'Arial', sans-serif; color: #222; background: #fff; }
+                  .page { max-width: 900px; margin: 0 auto; }
+                  .header { background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: white; padding: 30px 40px; text-align: center; }
+                  .header-content { display: flex; align-items: center; justify-content: center; gap: 15px; }
+                  .logo { width: 50px; height: 50px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #1e3a5f; font-size: 24px; }
+                  .header-text { text-align: left; }
+                  .header h1 { font-size: 24px; font-weight: bold; }
+                  .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+                  .content { padding: 40px; }
+                  .metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 12px; color: #666; background: #f9f9f9; padding: 15px; border-radius: 6px; }
+                  .metadata-row { display: flex; gap: 5px; }
+                  .metadata-label { font-weight: bold; min-width: 100px; }
+                  .extract { white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.8; color: #333; background: #f9f9f9; padding: 20px; border-radius: 6px; border-left: 4px solid #1e3a5f; }
+                  .footer { padding: 20px 40px; border-top: 1px solid #ddd; font-size: 10px; color: #999; text-align: center; background: #f9f9f9; }
+                  @media print { body { margin: 0; padding: 0; } .page { max-width: 100%; } }
+                </style>
+              </head><body>
+                <div class="page">
+                  <div class="header">
+                    <div class="header-content">
+                      <div class="logo">⚖️</div>
+                      <div class="header-text">
+                        <h1>Pérez & Funes</h1>
+                        <p>Estudio Jurídico · Negocios Inmobiliarios</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="content">
+                    <div class="metadata">
+                      <div class="metadata-row">
+                        <span class="metadata-label">Caso:</span>
+                        <span>${caso?.titulo || "—"}</span>
+                      </div>
+                      <div class="metadata-row">
+                        <span class="metadata-label">Agente:</span>
+                        <span>${agente || "—"}</span>
+                      </div>
+                      <div class="metadata-row">
+                        <span class="metadata-label">Fecha:</span>
+                        <span>${hoy}</span>
+                      </div>
+                    </div>
+                    <div class="extract">${textoSeleccionado}</div>
+                  </div>
+                  <div class="footer">
+                    <p>Documento generado por el Sistema de Análisis - Estudio Jurídico Pérez & Funes</p>
+                  </div>
+                </div>
+              </body></html>`);
+              w.document.close();
+              w.print();
+            }}
+          >
+            <Printer className="w-3.5 h-3.5" /> Imprimir selección
+          </Button>
+        </div>
+      )}
+      <div ref={textRef} className="prose prose-sm max-w-none text-sm">
+        <ReactMarkdown>{texto}</ReactMarkdown>
+      </div>
     </div>
   );
 }
@@ -701,7 +788,7 @@ export default function AgenteIA({ caso, documentos }) {
                       </div>
                     </div>
                     {a.respuesta && (
-                      <RespuestaAnalisis respuesta={a.respuesta} />
+                      <RespuestaAnalisis respuesta={a.respuesta} caso={caso} agente={ag?.label} />
                     )}
                   </CardContent>
                 </Card>
