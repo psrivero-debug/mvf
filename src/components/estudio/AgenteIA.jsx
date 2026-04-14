@@ -222,6 +222,41 @@ const accionesRapidas = [
   },
 ];
 
+function EscalaFavor({ valor, onChange }) {
+  const estiloFondo = (val) => {
+    if (val > 0) return `linear-gradient(to right, #f0f0f0 ${50}%, #4CAF50 ${50 + (val * 2.5)}%)`;
+    if (val < 0) return `linear-gradient(to right, #f44336 ${50 + (val * 2.5)}%, #f0f0f0 ${50}%)`;
+    return "#f0f0f0";
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs font-medium text-destructive">Demandante -10</div>
+        <div className="flex-1">
+          <input
+            type="range"
+            min="-10"
+            max="10"
+            value={valor}
+            onChange={(e) => onChange(parseInt(e.target.value))}
+            className="w-full h-2 rounded-lg accent-primary"
+            style={{
+              background: estiloFondo(valor)
+            }}
+          />
+        </div>
+        <div className="text-xs font-medium text-green-600">Demandado +10</div>
+      </div>
+      <div className="flex justify-between items-center text-xs text-muted-foreground">
+        <span>10 Débiles</span>
+        <span className="font-semibold text-primary">{valor > 0 ? `+${valor} Demandado` : valor < 0 ? `${valor} Demandante` : 'Neutro'}</span>
+        <span>10 Fuertes</span>
+      </div>
+    </div>
+  );
+}
+
 function RespuestaAnalisis({ respuesta, caso, agente }) {
   const [texto, setTexto] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState("");
@@ -344,6 +379,7 @@ export default function AgenteIA({ caso, documentos }) {
   const [consultandoIdx, setConsultandoIdx] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [analisisSeleccionados, setAnalisisSeleccionados] = useState(new Set());
+  const [escalaFavor, setEscalaFavor] = useState(0);
   const queryClient = useQueryClient();
 
   const { data: analisis = [] } = useQuery({
@@ -560,6 +596,12 @@ export default function AgenteIA({ caso, documentos }) {
             <p className="text-xs text-muted-foreground mt-1">Sin selección = usa todos los documentos</p>
           </div>
         )}
+
+        {/* Escala de favor */}
+        <div className="p-4 rounded-lg border bg-muted/30">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-3 block">Escala de favor en el caso</Label>
+          <EscalaFavor valor={escalaFavor} onChange={setEscalaFavor} />
+        </div>
 
         {/* Área de consulta */}
         <div className="space-y-3">
