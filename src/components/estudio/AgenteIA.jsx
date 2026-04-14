@@ -238,12 +238,36 @@ export default function AgenteIA({ caso, documentos }) {
     setAgentesSeleccionados(accion.agentes);
   };
 
+  // Si contenido_texto es una URL (texto largo subido como archivo), hace fetch del contenido real
+  const resolverContenido = async (doc) => {
+    const texto = doc.contenido_texto;
+    if (!texto) return "(Sin texto)";
+    if (texto.startsWith("http://") || texto.startsWith("https://")) {
+      try {
+        const res = await fetch(texto);
+        return await res.text();
+      } catch {
+        return texto;
+      }
+    }
+    return texto;
+  };
+
   const ejecutarConsulta = async (consultaTexto, agentesIds) => {
     if (!consultaTexto.trim() || isPending) return;
     setIsPending(true);
     const docsUsados = documentos.filter(d => docsSeleccionados.length === 0 || docsSeleccionados.includes(d.id));
-    const docsTexto = docsUsados.length > 0
-      ? docsUsados.map(d => `--- DOCUMENTO: "${d.titulo}" (Fuente: ${d.fuente || "No especificada"}, Fecha: ${d.fecha_documento || "No especificada"}) ---\n${d.contenido_texto || "(Sin texto)"}`).join("\n\n")
+
+    // Resolver contenido real de cada documento (incluyendo los guardados como URL)
+    const docsConTexto = await Promise.all(
+      docsUsados.map(async d => ({
+        ...d,
+        contenido_resuelto: await resolverContenido(d),
+      }))
+    );
+
+    const docsTexto = docsConTexto.length > 0
+      ? docsConTexto.map(d => `--- DOCUMENTO: "${d.titulo}" (Fuente: ${d.fuente || "No especificada"}, Fecha: ${d.fecha_documento || "No especificada"}) ---\n${d.contenido_resuelto}`).join("\n\n")
       : "(No hay documentos con texto disponibles en el caso)";
 
     for (const agenteId of agentesIds) {

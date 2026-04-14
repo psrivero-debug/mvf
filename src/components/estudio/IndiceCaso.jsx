@@ -58,8 +58,23 @@ async function digitalizarDocumento(doc) {
   return { contenido, titulo, fecha };
 }
 
+// Si contenido_texto es una URL (texto largo subido como archivo), hace fetch del contenido real
+async function resolverContenido(texto) {
+  if (!texto) return "";
+  if (texto.startsWith("http://") || texto.startsWith("https://")) {
+    try {
+      const res = await fetch(texto);
+      return await res.text();
+    } catch {
+      return texto;
+    }
+  }
+  return texto;
+}
+
 async function generarResumen(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 30) return null;
+  const texto = await resolverContenido(doc.contenido_texto);
   const resultado = await base44.integrations.Core.InvokeLLM({
     prompt: `Analizá este documento jurídico y generá un resumen breve (2-4 oraciones) usando el siguiente formato HTML:
 
@@ -74,13 +89,14 @@ Ejemplos:
 Devolvé ÚNICAMENTE el HTML del resumen, sin markdown, sin etiquetas html/body, sin explicaciones.
 
 TEXTO:
-${doc.contenido_texto.slice(0, 3000)}`,
+${texto.slice(0, 3000)}`,
   });
   return resultado || null;
 }
 
 async function extraerTitulo(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 10) return null;
+  const texto = await resolverContenido(doc.contenido_texto);
   const resultado = await base44.integrations.Core.InvokeLLM({
     prompt: `Del siguiente texto de un documento jurídico argentino, extraé el título real del documento tal como figura en el encabezado o cuerpo del texto.
 Si no hay título explícito, escribí una descripción concisa y específica del acto jurídico (máximo 10 palabras).
@@ -88,24 +104,51 @@ Ejemplos correctos: "Informe de relación de obrados Expte. PEX 323910/22", "Sen
 Devolvé ÚNICAMENTE el título, sin comillas ni explicaciones adicionales.
 
 TEXTO:
-${doc.contenido_texto.slice(0, 2000)}`,
+${texto.slice(0, 2000)}`,
   });
   return resultado?.trim() || null;
 }
 
 async function extraerFecha(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 10) return null;
+  const texto = await resolverContenido(doc.contenido_texto);
   const resultado = await base44.integrations.Core.InvokeLLM({
     prompt: `Del siguiente texto de un documento jurídico argentino, extraé la fecha principal del documento (la fecha en que fue emitido, firmado o fechado).
 Devolvé ÚNICAMENTE la fecha en formato YYYY-MM-DD. Si no encontrás ninguna fecha, devolvé la palabra null.
 No agregues ningún otro texto ni explicación.
 
 TEXTO:
-${doc.contenido_texto.slice(0, 2000)}`,
+${texto.slice(0, 2000)}`,
   });
   const fecha = resultado?.trim();
   if (!fecha || fecha === "null" || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
   return fecha;
+}
+
+function LeerCompleto({ contenido_texto }) {
+  const [texto, setTexto] = useState(null);
+  const [abierto, setAbierto] = useState(false);
+
+  const handleAbrir = async () => {
+    if (!abierto && texto === null) {
+      const resuelto = await resolverContenido(contenido_texto);
+      setTexto(resuelto);
+    }
+    setAbierto(prev => !prev);
+  };
+
+  return (
+    <div className="mt-2">
+      <button onClick={handleAbrir} className="text-xs text-primary cursor-pointer hover:underline select-none">
+        {abierto ? "Ocultar texto" : "Leer completo"}
+      </button>
+      {abierto && (
+        <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border leading-relaxed">
+          {texto === null ? <Loader2 className="w-3 h-3 animate-spin" /> : texto}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function IndiceCaso({ documentos }) {
@@ -513,14 +556,7 @@ export default function IndiceCaso({ documentos }) {
 
                   {/* Leer completo */}
                   {doc.contenido_texto && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-primary cursor-pointer hover:underline select-none w-fit">
-                        Leer completo
-                      </summary>
-                      <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border leading-relaxed">
-                        {doc.contenido_texto}
-                      </div>
-                    </details>
+                    <LeerCompleto contenido_texto={doc.contenido_texto} />
                   )}
                 </div>
 
