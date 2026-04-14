@@ -304,15 +304,14 @@ export default function IndiceCaso({ documentos }) {
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-44 h-9">
-            <ArrowUpDown className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+          <SelectTrigger className="w-52 h-9">
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="orden">Orden del caso</SelectItem>
             <SelectItem value="titulo">Título A-Z</SelectItem>
-            <SelectItem value="fecha">Fecha (más antiguo)</SelectItem>
-            <SelectItem value="fecha_desc">Fecha (más reciente)</SelectItem>
+            <SelectItem value="fecha">📅 Fecha más antigua primero</SelectItem>
+            <SelectItem value="fecha_desc">📅 Fecha más reciente primero</SelectItem>
           </SelectContent>
         </Select>
       </div>
