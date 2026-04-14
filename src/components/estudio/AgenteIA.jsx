@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square, Clock, Tag, Zap, Printer } from "lucide-react";
+import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square, Clock, Tag, Zap, Printer, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import Anotaciones from "./Anotaciones";
 
@@ -589,98 +589,177 @@ export default function AgenteIA({ caso, documentos }) {
         {/* Historial */}
         {analisis.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Historial de análisis ({analisisSeleccionados.size})</h3>
               {analisisSeleccionados.size > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2 text-xs"
-                  onClick={async () => {
-                    const analisisAImprimir = analisis.filter(a => analisisSeleccionados.has(a.id));
-                    const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-                    
-                    const analisisConTexto = await Promise.all(
-                      analisisAImprimir.map(async (a) => {
-                        let texto = a.respuesta || "";
-                        if (texto.startsWith("http://") || texto.startsWith("https://")) {
-                          try { texto = await fetch(texto).then(r => r.text()); } catch {}
-                        }
-                        return { ...a, textoResuelto: texto };
-                      })
-                    );
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 text-xs"
+                    onClick={async () => {
+                      const analisisAExportar = analisis.filter(a => analisisSeleccionados.has(a.id));
+                      const analisisConTexto = await Promise.all(
+                        analisisAExportar.map(async (a) => {
+                          let texto = a.respuesta || "";
+                          if (texto.startsWith("http://") || texto.startsWith("https://")) {
+                            try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                          }
+                          const primeraLinea = texto.split('\n')[0].substring(0, 100);
+                          return { ...a, textoResuelto: texto, argumento: primeraLinea };
+                        })
+                      );
 
-                    const w = window.open("", "_blank");
-                    const contenidoAnalisis = analisisConTexto.map((a, idx) => {
-                      const ag = agentes.find(ag => ag.id === a.agente);
-                      return `<div style="page-break-after: always; padding: 20px 0; border-bottom: 2px solid #ddd;">
-                        <div style="display: inline-block; background: #2c5282; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 15px;">${ag?.label || "Análisis"}</div>
-                        <p style="font-size: 12px; color: #666; margin: 5px 0;"><strong>Consulta:</strong> ${a.consulta}</p>
-                        <p style="font-size: 12px; color: #666; margin: 5px 0;"><strong>Agente:</strong> ${ag?.label || "—"}</p>
-                        <div style="white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.8; color: #333; margin-top: 15px;">${a.textoResuelto}</div>
-                      </div>`;
-                    }).join("");
+                      const fichas = analisisConTexto.map(a => ({
+                        titulo: a.consulta,
+                        argumento: a.argumento,
+                      }));
 
-                    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-                      <style>
-                        * { margin: 0; padding: 0; }
-                        body { font-family: 'Arial', sans-serif; color: #222; background: #fff; }
-                        .page { max-width: 900px; margin: 0 auto; }
-                        .header { background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: white; padding: 30px 40px; text-align: center; }
-                        .header-content { display: flex; align-items: center; justify-content: center; gap: 15px; }
-                        .logo { width: 50px; height: 50px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #1e3a5f; font-size: 24px; }
-                        .header-text { text-align: left; }
-                        .header h1 { font-size: 24px; font-weight: bold; }
-                        .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-                        .content { padding: 40px; }
-                        .metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 12px; color: #666; background: #f9f9f9; padding: 15px; border-radius: 6px; }
-                        .metadata-row { display: flex; gap: 5px; }
-                        .metadata-label { font-weight: bold; min-width: 100px; }
-                        .footer { padding: 20px 40px; border-top: 1px solid #ddd; font-size: 10px; color: #999; text-align: center; background: #f9f9f9; }
-                        @media print { 
-                          body { margin: 0; padding: 0; }
-                          .page { max-width: 100%; }
-                        }
-                      </style>
-                    </head><body>
-                      <div class="page">
-                        <div class="header">
-                          <div class="header-content">
-                            <div class="logo">⚖️</div>
-                            <div class="header-text">
-                              <h1>Pérez & Funes</h1>
-                              <p>Estudio Jurídico · Negocios Inmobiliarios</p>
+                      const totalPaginas = Math.ceil(fichas.length / 2);
+                      let contenidoFichas = "";
+
+                      for (let i = 0; i < fichas.length; i += 2) {
+                        const ficha1 = fichas[i];
+                        const ficha2 = fichas[i + 1];
+                        const pagina = Math.floor(i / 2) + 1;
+
+                        contenidoFichas += `
+                          <div style="page-break-after: always; padding: 40px; min-height: 297mm; display: flex; flex-direction: column; gap: 20px;">
+                            <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
+                              <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px;">
+                                <h2 style="font-size: 16px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha1.titulo}</h2>
+                              </div>
+                              <div style="flex: 1; font-size: 13px; line-height: 1.6; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap;">
+                                ${ficha1.argumento}
+                              </div>
+                            </div>
+                            ${ficha2 ? `
+                            <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
+                              <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px;">
+                                <h2 style="font-size: 16px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha2.titulo}</h2>
+                              </div>
+                              <div style="flex: 1; font-size: 13px; line-height: 1.6; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap;">
+                                ${ficha2.argumento}
+                              </div>
+                            </div>
+                            ` : ""}
+                            <div style="text-align: center; font-size: 10px; color: #999; padding-top: 15px; border-top: 1px solid #ddd;">
+                              Página ${pagina} de ${totalPaginas}
                             </div>
                           </div>
-                        </div>
-                        <div class="content">
-                          <div class="metadata">
-                            <div class="metadata-row">
-                              <span class="metadata-label">Caso:</span>
-                              <span>${caso.titulo}</span>
-                            </div>
-                            <div class="metadata-row">
-                              <span class="metadata-label">Análisis:</span>
-                              <span>${analisisSeleccionados.size} documento${analisisSeleccionados.size > 1 ? "s" : ""}</span>
-                            </div>
-                            <div class="metadata-row">
-                              <span class="metadata-label">Fecha:</span>
-                              <span>${hoy}</span>
+                        `;
+                      }
+
+                      const w = window.open("", "_blank");
+                      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                        <style>
+                          * { margin: 0; padding: 0; }
+                          body { font-family: 'Arial', sans-serif; color: #222; background: #fff; }
+                          @page { size: A4; margin: 0; }
+                          @media print { 
+                            body { margin: 0; padding: 0; }
+                            div[style*="page-break-after"] { page-break-after: always; }
+                          }
+                        </style>
+                      </head><body>
+                        ${contenidoFichas}
+                      </body></html>`);
+                      w.document.close();
+                      w.print();
+                    }}
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Exportar como fichas
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 text-xs"
+                    onClick={async () => {
+                      const analisisAImprimir = analisis.filter(a => analisisSeleccionados.has(a.id));
+                      const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+                      
+                      const analisisConTexto = await Promise.all(
+                        analisisAImprimir.map(async (a) => {
+                          let texto = a.respuesta || "";
+                          if (texto.startsWith("http://") || texto.startsWith("https://")) {
+                            try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                          }
+                          return { ...a, textoResuelto: texto };
+                        })
+                      );
+
+                      const w = window.open("", "_blank");
+                      const contenidoAnalisis = analisisConTexto.map((a, idx) => {
+                        const ag = agentes.find(ag => ag.id === a.agente);
+                        return `<div style="page-break-after: always; padding: 20px 0; border-bottom: 2px solid #ddd;">
+                          <div style="display: inline-block; background: #2c5282; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 15px;">${ag?.label || "Análisis"}</div>
+                          <p style="font-size: 12px; color: #666; margin: 5px 0;"><strong>Consulta:</strong> ${a.consulta}</p>
+                          <p style="font-size: 12px; color: #666; margin: 5px 0;"><strong>Agente:</strong> ${ag?.label || "—"}</p>
+                          <div style="white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.8; color: #333; margin-top: 15px;">${a.textoResuelto}</div>
+                        </div>`;
+                      }).join("");
+
+                      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                        <style>
+                          * { margin: 0; padding: 0; }
+                          body { font-family: 'Arial', sans-serif; color: #222; background: #fff; }
+                          .page { max-width: 900px; margin: 0 auto; }
+                          .header { background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: white; padding: 30px 40px; text-align: center; }
+                          .header-content { display: flex; align-items: center; justify-content: center; gap: 15px; }
+                          .logo { width: 50px; height: 50px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #1e3a5f; font-size: 24px; }
+                          .header-text { text-align: left; }
+                          .header h1 { font-size: 24px; font-weight: bold; }
+                          .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+                          .content { padding: 40px; }
+                          .metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 12px; color: #666; background: #f9f9f9; padding: 15px; border-radius: 6px; }
+                          .metadata-row { display: flex; gap: 5px; }
+                          .metadata-label { font-weight: bold; min-width: 100px; }
+                          .footer { padding: 20px 40px; border-top: 1px solid #ddd; font-size: 10px; color: #999; text-align: center; background: #f9f9f9; }
+                          @media print { 
+                            body { margin: 0; padding: 0; }
+                            .page { max-width: 100%; }
+                          }
+                        </style>
+                      </head><body>
+                        <div class="page">
+                          <div class="header">
+                            <div class="header-content">
+                              <div class="logo">⚖️</div>
+                              <div class="header-text">
+                                <h1>Pérez & Funes</h1>
+                                <p>Estudio Jurídico · Negocios Inmobiliarios</p>
+                              </div>
                             </div>
                           </div>
-                          ${contenidoAnalisis}
+                          <div class="content">
+                            <div class="metadata">
+                              <div class="metadata-row">
+                                <span class="metadata-label">Caso:</span>
+                                <span>${caso.titulo}</span>
+                              </div>
+                              <div class="metadata-row">
+                                <span class="metadata-label">Análisis:</span>
+                                <span>${analisisSeleccionados.size} documento${analisisSeleccionados.size > 1 ? "s" : ""}</span>
+                              </div>
+                              <div class="metadata-row">
+                                <span class="metadata-label">Fecha:</span>
+                                <span>${hoy}</span>
+                              </div>
+                            </div>
+                            ${contenidoAnalisis}
+                          </div>
+                          <div class="footer">
+                            <p>Documento generado por el Sistema de Análisis - Estudio Jurídico Pérez & Funes</p>
+                          </div>
                         </div>
-                        <div class="footer">
-                          <p>Documento generado por el Sistema de Análisis - Estudio Jurídico Pérez & Funes</p>
-                        </div>
-                      </div>
-                    </body></html>`);
-                    w.document.close();
-                    w.print();
-                  }}
-                >
-                  <Printer className="w-3.5 h-3.5" /> Imprimir selección ({analisisSeleccionados.size})
-                </Button>
+                      </body></html>`);
+                      w.document.close();
+                      w.print();
+                    }}
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Imprimir selección ({analisisSeleccionados.size})
+                  </Button>
+                </div>
               )}
             </div>
             {analisis.map((a) => {
