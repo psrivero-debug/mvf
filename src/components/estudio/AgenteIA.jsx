@@ -523,19 +523,65 @@ export default function AgenteIA({ caso, documentos }) {
                             if (texto.startsWith("http://") || texto.startsWith("https://")) {
                               try { texto = await fetch(texto).then(r => r.text()); } catch {}
                             }
+                            const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
                             const w = window.open("", "_blank");
                             w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
                               <style>
-                                body { font-family: Arial, sans-serif; padding: 40px; color: #222; max-width: 800px; margin: 0 auto; }
-                                h1 { font-size: 18px; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; }
-                                .meta { font-size: 12px; color: #666; margin-bottom: 20px; }
-                                pre { white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.7; }
-                                @media print { button { display: none; } }
+                                * { margin: 0; padding: 0; }
+                                body { font-family: 'Arial', sans-serif; color: #222; background: #fff; }
+                                .page { max-width: 900px; margin: 0 auto; }
+                                .header { background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: white; padding: 30px 40px; text-align: center; }
+                                .header-content { display: flex; align-items: center; justify-content: center; gap: 15px; }
+                                .logo { width: 50px; height: 50px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #1e3a5f; font-size: 24px; }
+                                .header-text { text-align: left; }
+                                .header h1 { font-size: 24px; font-weight: bold; }
+                                .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+                                .content { padding: 40px; }
+                                .metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; font-size: 12px; color: #666; background: #f9f9f9; padding: 15px; border-radius: 6px; }
+                                .metadata-row { display: flex; gap: 5px; }
+                                .metadata-label { font-weight: bold; min-width: 100px; }
+                                .agent-badge { display: inline-block; background: #2c5282; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 15px; }
+                                .analysis-title { font-size: 14px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px; }
+                                .analysis-text { white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.8; color: #333; }
+                                .footer { padding: 20px 40px; border-top: 1px solid #ddd; font-size: 10px; color: #999; text-align: center; background: #f9f9f9; }
+                                @media print { 
+                                  body { margin: 0; padding: 0; }
+                                  .page { max-width: 100%; }
+                                }
                               </style>
                             </head><body>
-                              <h1>${ag?.label || "Análisis"}</h1>
-                              <div class="meta">Consulta: ${a.consulta} · Caso: ${caso.titulo}</div>
-                              <pre>${texto}</pre>
+                              <div class="page">
+                                <div class="header">
+                                  <div class="header-content">
+                                    <div class="logo">⚖️</div>
+                                    <div class="header-text">
+                                      <h1>Pérez & Funes</h1>
+                                      <p>Estudio Jurídico · Negocios Inmobiliarios</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="content">
+                                  <div class="agent-badge">${ag?.label || "Análisis"}</div>
+                                  <div class="metadata">
+                                    <div class="metadata-row">
+                                      <span class="metadata-label">Caso:</span>
+                                      <span>${caso.titulo}</span>
+                                    </div>
+                                    <div class="metadata-row">
+                                      <span class="metadata-label">Consulta:</span>
+                                      <span>${a.consulta}</span>
+                                    </div>
+                                    <div class="metadata-row">
+                                      <span class="metadata-label">Fecha:</span>
+                                      <span>${hoy}</span>
+                                    </div>
+                                  </div>
+                                  <div class="analysis-text">${texto}</div>
+                                </div>
+                                <div class="footer">
+                                  <p>Documento generado por el Sistema de Análisis - Estudio Jurídico Pérez & Funes</p>
+                                </div>
+                              </div>
                             </body></html>`);
                             w.document.close();
                             w.print();
