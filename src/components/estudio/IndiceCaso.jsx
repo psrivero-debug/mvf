@@ -61,9 +61,17 @@ async function digitalizarDocumento(doc) {
 async function generarResumen(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 30) return null;
   const resultado = await base44.integrations.Core.InvokeLLM({
-    prompt: `Resumí en 2-3 oraciones breves y precisas el contenido de este documento jurídico. 
-Indicá: qué tipo de acto o documento es, quiénes intervienen (si se mencionan) y cuál es su objeto o resolución principal.
-Sé conciso y directo. No uses frases como "El documento..." o "Este texto...". Empezá directo con el contenido.
+    prompt: `Analizá este documento jurídico y generá un resumen breve (2-4 oraciones) usando el siguiente formato HTML:
+
+- Envolvé en <strong> los datos, fechas, nombres o hechos más importantes.
+- Envolvé en <span class="text-red-600"> los puntos débiles, dudosos, contradictorios o desfavorables.
+- Envolvé en <span class="text-blue-600"> los puntos fuertes, favorables o sólidos jurídicamente.
+- El resto del texto va sin formato especial.
+
+Ejemplos:
+- "<strong>Sentencia del 12/03/2023</strong> que condena al demandado a pagar <strong>$500.000</strong>. <span class='text-blue-600'>El fallo está bien fundado en el art. 522 CC</span>, aunque <span class='text-red-600'>no se notificó correctamente a la parte actora</span>."
+
+Devolvé ÚNICAMENTE el HTML del resumen, sin markdown, sin etiquetas html/body, sin explicaciones.
 
 TEXTO:
 ${doc.contenido_texto.slice(0, 3000)}`,
@@ -476,7 +484,7 @@ export default function IndiceCaso({ documentos }) {
                       <Loader2 className="w-3 h-3 animate-spin" /> Generando resumen...
                     </div>
                   ) : res?.text ? (
-                    <p className="text-sm text-foreground/80 leading-relaxed mt-1">{res.text}</p>
+                    <p className="text-sm text-foreground/80 leading-relaxed mt-1" dangerouslySetInnerHTML={{ __html: res.text }} />
                   ) : null}
 
                   {/* Notas */}
