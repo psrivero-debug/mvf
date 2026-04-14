@@ -70,7 +70,7 @@ Respondé con estrategia defensiva detallada, usando superíndices en cada afirm
     color: "bg-purple-100 text-purple-700",
     borderColor: "border-purple-400",
     descripcion: "Análisis objetivo e imparcial del caso, probabilidades",
-    keywords: ["probabilidad", "chance", "posibilidad", "objetivo", "imparcial", "fortaleza", "debilidad", "resultado", "ganamos", "perdem"],
+    keywords: ["probabilidad", "chance", "posibilidad", "objetivo", "imparcial", "fortaleza", "debilidad", "resultado", "ganamos", "perdem", "calcul", "análisis", "perspectiva"],
     prompt: (consulta, docsTexto, escalaFavor) => `Sos Justua, un agente jurídico experto en derecho argentino, Provincia de San Luis.
 Tu tarea es analizar el caso de forma objetiva e imparcial, evaluando fortalezas y debilidades de cada parte.
 
@@ -626,13 +626,26 @@ export default function AgenteIA({ caso, documentos }) {
             onKeyDown={e => { if (e.key === "Enter" && e.ctrlKey) handleConsultar(); }}
           />
           <div className="flex items-center gap-3">
-            <Button onClick={handleConsultar} disabled={!consulta.trim() || isPending} className="gap-2">
+            <Button 
+              onClick={handleConsultar} 
+              disabled={!consulta.trim() || isPending} 
+              className="gap-2"
+            >
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {isPending
                 ? `Consultando ${agentes.find(a => a.id === consultandoIdx)?.label || ""}...`
                 : `Consultar${agentesSeleccionados.length > 1 ? ` (${agentesSeleccionados.length} agentes)` : ""}`
               }
             </Button>
+            {agentesSeleccionados.includes("analista") && !consulta.trim() && (
+              <Button 
+                onClick={() => ejecutarConsulta("Realizá un análisis completo del caso considerando el balance actual.", ["analista"])}
+                disabled={isPending}
+                className="gap-2 bg-purple-600 hover:bg-purple-700"
+              >
+                <Sparkles className="w-4 h-4" /> Calcular
+              </Button>
+            )}
             {isPending && (
               <p className="text-xs text-muted-foreground animate-pulse">
                 {agentesSeleccionados.indexOf(consultandoIdx) + 1}/{agentesSeleccionados.length} · {agentes.find(a => a.id === consultandoIdx)?.label}...
