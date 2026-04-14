@@ -69,14 +69,18 @@ export default function IndiceCaso({ documentos }) {
   // Auto-generar resúmenes de docs con texto al cargar
   useEffect(() => {
     documentos.forEach(doc => {
-      if (doc.contenido_texto && doc.contenido_texto.trim().length >= 30 && !resumenes[doc.id]) {
-        setResumenes(prev => ({ ...prev, [doc.id]: { loading: true, text: null } }));
-        generarResumen(doc).then(text => {
-          setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+      if (doc.contenido_texto && doc.contenido_texto.trim().length >= 30) {
+        setResumenes(prev => {
+          if (prev[doc.id]) return prev; // ya existe, no tocar
+          const next = { ...prev, [doc.id]: { loading: true, text: null } };
+          generarResumen(doc).then(text => {
+            setResumenes(p => ({ ...p, [doc.id]: { loading: false, text } }));
+          });
+          return next;
         });
       }
     });
-  }, [documentos]);
+  }, [documentos.map(d => d.id).join(",")]);
 
   const handleGenerarTodos = async () => {
     const sinResumen = documentos.filter(
