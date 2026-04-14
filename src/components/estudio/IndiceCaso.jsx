@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye, Pencil, Check, X } from "lucide-react";
+import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye, Pencil, Check, X, ScanText, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -20,6 +20,43 @@ const tipoColors = {
   contrato: "bg-yellow-100 text-yellow-700", imagen: "bg-pink-100 text-pink-700",
   pdf: "bg-red-100 text-red-700", otro: "bg-gray-100 text-gray-600",
 };
+
+const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
+Tu tarea es transcribir el contenido de esta imagen con la máxima fidelidad posible.
+
+INSTRUCCIONES ESTRICTAS:
+- Transcribí CADA PALABRA visible, incluyendo encabezados, sellos, firmas (indicalas como "[FIRMA]"), foliatura, numeraciones y fechas.
+- Mantené la estructura original: párrafos, sangrías, listas numeradas, bullet points.
+- Si hay texto manuscrito, transcribilo entre [MANUSCRITO: ...].
+- Si hay sellos o membretes, transcribilos entre [SELLO: ...].
+- Respetá mayúsculas, puntuación y acentos tal como aparecen.
+- NO resumas, NO omitas nada. Transcribí TODO el texto visible de principio a fin.
+- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [un título descriptivo conciso del documento, máximo 8 palabras].
+- Al final, en otra línea separada, escribí: FECHA SUGERIDA: [la fecha principal del documento en formato YYYY-MM-DD, o null si no hay].
+
+Devolvé ÚNICAMENTE la transcripción completa (con título y fecha al final), sin comentarios ni aclaraciones previas.`;
+
+async function digitalizarDocumento(doc) {
+  if (!doc.file_url) return null;
+  const resultado = await base44.integrations.Core.InvokeLLM({
+    prompt: PROMPT_TRANSCRIPCION,
+    file_urls: [doc.file_url],
+    model: "claude_sonnet_4_6",
+  });
+
+  const lines = resultado.split("\n");
+  const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
+  const fechaLine = lines.findLast(l => l.trim().startsWith("FECHA SUGERIDA:"));
+
+  const titulo = tituloLine ? tituloLine.replace("TÍTULO SUGERIDO:", "").trim() : null;
+  const fechaRaw = fechaLine ? fechaLine.replace("FECHA SUGERIDA:", "").trim() : null;
+  const fecha = fechaRaw && /^\d{4}-\d{2}-\d{2}$/.test(fechaRaw) ? fechaRaw : null;
+  const contenido = lines
+    .filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:") && !l.trim().startsWith("FECHA SUGERIDA:"))
+    .join("\n").trim();
+
+  return { contenido, titulo, fecha };
+}
 
 async function generarResumen(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 30) return null;
@@ -59,6 +96,7 @@ export default function IndiceCaso({ documentos }) {
   const [generandoTodos, setGenerandoTodos] = useState(false);
   const [editando, setEditando] = useState({});
   const [extrayendoFecha, setExtrayendoFecha] = useState({});
+  const [digitalizando, setDigitalizando] = useState({});
   const queryClient = useQueryClient();
 
   const filtered = documentos
@@ -116,6 +154,34 @@ export default function IndiceCaso({ documentos }) {
     setGenerandoTodos(false);
   };
 
+  const handleDigitalizar = async (doc) => {
+    if (!doc.file_url) return;
+    setDigitalizando(prev => ({ ...prev, [doc.id]: true }));
+    const resultado = await digitalizarDocumento(doc);
+    if (resultado) {
+      const updates = { contenido_texto: resultado.contenido };
+      if (resultado.titulo && !doc.titulo) updates.titulo = resultado.titulo;
+      if (resultado.fecha && !doc.fecha_documento) updates.fecha_documento = resultado.fecha;
+      await base44.entities.CasoDocumento.update(doc.id, updates);
+      queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
+      // Generar resumen inmediatamente con el texto nuevo
+      const docActualizado = { ...doc, ...updates };
+      const text = await generarResumen(docActualizado);
+      if (text) setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+    }
+    setDigitalizando(prev => ({ ...prev, [doc.id]: false }));
+  };
+
+  const handleDigitalizarTodos = async () => {
+    const sinTexto = documentos.filter(d => !d.contenido_texto && d.file_url);
+    if (!sinTexto.length) return;
+    setGenerandoTodos(true);
+    for (const doc of sinTexto) {
+      await handleDigitalizar(doc);
+    }
+    setGenerandoTodos(false);
+  };
+
   const abrirEdicion = (doc) => {
     setEditando(prev => ({ ...prev, [doc.id]: { titulo: doc.titulo || "", fecha_documento: doc.fecha_documento || "" } }));
   };
@@ -148,6 +214,8 @@ export default function IndiceCaso({ documentos }) {
     cancelarEdicion(doc.id);
   };
 
+  const sinTexto = documentos.filter(d => !d.contenido_texto && d.file_url);
+
   if (documentos.length === 0) {
     return (
       <div className="text-center py-16 border-2 border-dashed rounded-xl">
@@ -160,6 +228,33 @@ export default function IndiceCaso({ documentos }) {
 
   return (
     <div className="space-y-4">
+
+      {/* Banner: documentos sin digitalizar */}
+      {sinTexto.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="flex items-start gap-3">
+            <ScanText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                {sinTexto.length} documento{sinTexto.length > 1 ? "s" : ""} sin digitalizar
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Sin texto digital los agentes de IA no pueden analizar estos archivos. Digitalizalos con OCR para desbloquear todas las funciones.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+            onClick={handleDigitalizarTodos}
+            disabled={generandoTodos}
+          >
+            {generandoTodos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {generandoTodos ? "Digitalizando..." : `Digitalizar todos con IA`}
+          </Button>
+        </div>
+      )}
+
       {/* Filtros principales */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
@@ -233,15 +328,17 @@ export default function IndiceCaso({ documentos }) {
         {filtered.map((doc, idx) => {
           const res = resumenes[doc.id];
           const edit = editando[doc.id];
+          const sinTextoDoc = !doc.contenido_texto;
+          const estaDigitalizando = digitalizando[doc.id];
+
           return (
-            <div key={doc.id} className="px-4 py-4 hover:bg-muted/20 transition-colors">
+            <div key={doc.id} className={`px-4 py-4 hover:bg-muted/20 transition-colors ${sinTextoDoc ? "bg-amber-50/30" : ""}`}>
               <div className="flex items-start gap-3">
                 <span className="text-xs font-mono text-muted-foreground w-6 shrink-0 mt-0.5">{idx + 1}</span>
-                <FileText className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                <FileText className={`w-4 h-4 shrink-0 mt-0.5 ${sinTextoDoc ? "text-amber-400" : "text-muted-foreground"}`} />
 
                 <div className="flex-1 min-w-0 space-y-1">
                   {edit ? (
-                    /* Modo edición */
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="flex items-center gap-1">
@@ -272,7 +369,6 @@ export default function IndiceCaso({ documentos }) {
                       </div>
                     </div>
                   ) : (
-                    /* Modo visualización */
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-1 group/titulo">
                         <span className="font-semibold text-sm">{doc.titulo}</span>
@@ -294,19 +390,18 @@ export default function IndiceCaso({ documentos }) {
                           <Calendar className="w-3 h-3" />
                           {format(new Date(doc.fecha_documento), "d 'de' MMMM yyyy", { locale: es })}
                         </span>
-                      ) : (
+                      ) : doc.contenido_texto ? (
                         <button
                           onClick={() => handleExtraerFecha(doc)}
-                          disabled={extrayendoFecha[doc.id] || !doc.contenido_texto}
-                          className="flex items-center gap-1 text-xs text-primary/60 italic hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={doc.contenido_texto ? "Extraer fecha del documento con IA" : "Sin texto transcripto"}
+                          disabled={extrayendoFecha[doc.id]}
+                          className="flex items-center gap-1 text-xs text-primary/60 italic hover:text-primary transition-colors disabled:opacity-40"
                         >
                           {extrayendoFecha[doc.id]
                             ? <><Loader2 className="w-3 h-3 animate-spin" /> Extrayendo fecha...</>
-                            : <><Calendar className="w-3 h-3" /> {doc.contenido_texto ? "Extraer fecha con IA" : "Sin fecha"}</>
+                            : <><Calendar className="w-3 h-3" /> Extraer fecha con IA</>
                           }
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   )}
 
@@ -315,15 +410,35 @@ export default function IndiceCaso({ documentos }) {
                     <p className="text-xs text-muted-foreground">Fuente: {doc.fuente}</p>
                   )}
 
-                  {/* Resumen */}
-                  {res?.loading ? (
+                  {/* Estado del documento: sin digitalizar / resumen / sin texto */}
+                  {sinTextoDoc ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      {estaDigitalizando ? (
+                        <span className="flex items-center gap-1.5 text-xs text-amber-700">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Digitalizando con IA... esto puede tomar unos segundos
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-xs text-amber-700 italic">Sin texto digital — los agentes no pueden analizar este documento</span>
+                          {doc.file_url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-100"
+                              onClick={() => handleDigitalizar(doc)}
+                            >
+                              <ScanText className="w-3 h-3" /> Digitalizar con IA
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ) : res?.loading ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                       <Loader2 className="w-3 h-3 animate-spin" /> Generando resumen...
                     </div>
                   ) : res?.text ? (
                     <p className="text-sm text-foreground/80 leading-relaxed mt-1">{res.text}</p>
-                  ) : !doc.contenido_texto ? (
-                    <p className="text-xs text-muted-foreground/60 italic mt-1">Sin texto transcripto — subí el archivo y transcribilo con IA</p>
                   ) : null}
 
                   {/* Notas */}
@@ -332,14 +447,27 @@ export default function IndiceCaso({ documentos }) {
                   )}
                 </div>
 
-                {/* Ver archivo */}
-                {doc.file_url && (
-                  <Button size="sm" variant="ghost" asChild className="shrink-0 mt-0.5">
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <Eye className="w-3.5 h-3.5" />
-                    </a>
-                  </Button>
-                )}
+                {/* Acciones derecha */}
+                <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                  {doc.contenido_texto && (
+                    <Button
+                      size="sm" variant="ghost"
+                      title="Re-digitalizar"
+                      onClick={() => handleDigitalizar(doc)}
+                      disabled={estaDigitalizando}
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                    >
+                      {estaDigitalizando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
+                  {doc.file_url && (
+                    <Button size="sm" variant="ghost" asChild className="h-7 w-7 p-0">
+                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                        <Eye className="w-3.5 h-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           );
