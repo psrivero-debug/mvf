@@ -84,42 +84,103 @@ export default function DocumentosList({ caso, documentos }) {
     e.target.value = "";
   };
 
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, step: "" });
+
   const handleBulkUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploading(true);
-    for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setBulkProgress({ current: 0, total: files.length, step: "" });
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const nombreBase = file.name.replace(/\.[^/.]+$/, "");
       const tipo = file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : "otro";
-      const nombre = file.name.replace(/\.[^/.]+$/, "");
+
+      // 1. Subir archivo
+      setBulkProgress({ current: i + 1, total: files.length, step: `Subiendo ${file.name}...` });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      // 2. Transcribir con IA
+      setBulkProgress({ current: i + 1, total: files.length, step: `Transcribiendo ${file.name}...` });
+      let contenido_texto = "";
+      let titulo = nombreBase;
+      try {
+        const resultado = await base44.integrations.Core.InvokeLLM({
+          prompt: PROMPT_TRANSCRIPCION,
+          file_urls: [file_url],
+          model: "claude_sonnet_4_6",
+        });
+        const lines = resultado.split("\n");
+        const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
+        if (tituloLine) {
+          titulo = tituloLine.replace("TÍTULO SUGERIDO:", "").trim() || nombreBase;
+          contenido_texto = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+        } else {
+          contenido_texto = resultado;
+        }
+      } catch {
+        contenido_texto = "";
+      }
+
+      // 3. Guardar documento
       await base44.entities.CasoDocumento.create({
         caso_id: caso.id,
-        titulo: nombre,
+        titulo,
         tipo_documento: tipo,
         file_url,
+        contenido_texto,
         fuente: "",
         fecha_documento: "",
         notas: "",
-        contenido_texto: "",
-        orden: 0,
+        orden: i,
       });
     }
+
     invalidate();
     setUploading(false);
+    setBulkProgress({ current: 0, total: 0, step: "" });
     e.target.value = "";
   };
+
+  const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
+Tu tarea es transcribir el contenido de esta imagen con la máxima fidelidad posible.
+
+INSTRUCCIONES ESTRICTAS:
+- Transcribí CADA PALABRA visible, incluyendo encabezados, sellos, firmas (indicalas como "[FIRMA]"), foliatura, numeraciones y fechas.
+- Mantené la estructura original: párrafos, sangrías, listas numeradas, bullet points.
+- Si hay texto manuscrito, transcribilo entre [MANUSCRITO: ...].
+- Si hay sellos o membretes, transcribilos entre [SELLO: ...].
+- Respetá mayúsculas, puntuación y acentos tal como aparecen.
+- NO resumas, NO omitas nada. Transcribí TODO el texto visible de principio a fin.
+- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [un título descriptivo conciso del documento, máximo 8 palabras].
+
+Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al final), sin comentarios ni aclaraciones previas.`;
 
   const handleTranscribir = async () => {
     if (!form.file_url) return;
     setTranscribiendo(true);
     const resultado = await base44.integrations.Core.InvokeLLM({
-      prompt: `Transcribí con exactitud el contenido de este documento al español. 
-Si es una imagen de texto manuscrito o impreso, extraé todo el texto visible. 
-Si es un documento PDF o imagen de expediente judicial, mantené la estructura original con párrafos, numeraciones y fechas.
-Devolvé solo el texto transcripto sin comentarios adicionales.`,
+      prompt: PROMPT_TRANSCRIPCION,
       file_urls: [form.file_url],
+      model: "claude_sonnet_4_6",
     });
-    setForm(prev => ({ ...prev, contenido_texto: resultado }));
+
+    // Extraer título sugerido si lo hay
+    const lines = resultado.split("\n");
+    const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
+    let textoFinal = resultado;
+    let tituloSugerido = null;
+    if (tituloLine) {
+      tituloSugerido = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
+      textoFinal = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+    }
+
+    setForm(prev => ({
+      ...prev,
+      contenido_texto: textoFinal,
+      titulo: prev.titulo || tituloSugerido || prev.titulo,
+    }));
     setTranscribiendo(false);
   };
 
@@ -136,7 +197,7 @@ Devolvé solo el texto transcripto sin comentarios adicionales.`,
             disabled={uploading}
           >
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Files className="w-4 h-4" />}
-            {uploading ? "Subiendo..." : "Subir varios archivos"}
+            {uploading ? `${bulkProgress.current}/${bulkProgress.total}` : "Subir y transcribir varios"}
           </Button>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-2">
             <Plus className="w-4 h-4" /> Agregar Documento
@@ -151,6 +212,20 @@ Devolvé solo el texto transcripto sin comentarios adicionales.`,
           onChange={handleBulkUpload}
         />
       </div>
+
+      {/* Progreso de carga masiva */}
+      {uploading && bulkProgress.total > 0 && (
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm flex items-center gap-3">
+          <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-primary text-xs">Procesando {bulkProgress.current} de {bulkProgress.total} archivos</p>
+            <p className="text-xs text-muted-foreground truncate">{bulkProgress.step}</p>
+          </div>
+          <div className="shrink-0 text-xs text-muted-foreground">
+            {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
+          </div>
+        </div>
+      )}
 
       {documentos.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed rounded-xl">
@@ -259,7 +334,7 @@ Devolvé solo el texto transcripto sin comentarios adicionales.`,
                 {form.file_url && (
                   <Button type="button" variant="outline" size="sm" className="gap-2 text-primary" onClick={handleTranscribir} disabled={transcribiendo}>
                     {transcribiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-                    {transcribiendo ? "Transcribiendo..." : "Transcribir con IA"}
+                    {transcribiendo ? "Transcribiendo..." : "Transcribir y nombrar con IA"}
                   </Button>
                 )}
                 <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileUpload} />
