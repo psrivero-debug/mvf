@@ -695,30 +695,33 @@ export default function AgenteIA({ caso, documentos }) {
                         const pagina = Math.floor(i / 2) + 1;
 
                         contenidoFichas += `
-                          <div style="page-break-after: always; padding: 40px; min-height: 297mm; display: flex; flex-direction: column; gap: 20px;">
-                            <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
-                              <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px;">
-                                <h2 style="font-size: 16px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha1.titulo}</h2>
-                                <p style="font-size: 11px; color: #666; margin: 5px 0 0 0;">Agente: ${ficha1.agente}</p>
+                          <div style="page-break-after: always; padding: 15mm 20mm; min-height: 270mm; display: flex; flex-direction: column; gap: 15px;">
+                            <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f9f9f9;">
+                              <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 10px;">
+                                <p style="font-size: 10px; font-weight: bold; color: #1e3a5f; margin: 0; margin-bottom: 3px;">Pérez & Funes - Estudio Jurídico · San Luis</p>
+                                <h2 style="font-size: 14px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha1.argumento.split('\n')[0].slice(0, 80)}</h2>
                               </div>
-                              <div style="flex: 1; font-size: 13px; line-height: 1.6; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap;">
+                              <div style="flex: 1; font-size: 12px; line-height: 1.5; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap; max-height: 200px; overflow: hidden;">
                                 ${ficha1.argumento}
+                              </div>
+                              <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #666;">
+                                <p style="margin: 0;">Ficha Nº${pagina * 2 - 1} | ${ficha1.agente}</p>
                               </div>
                             </div>
                             ${ficha2 ? `
-                            <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
-                              <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px;">
-                                <h2 style="font-size: 16px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha2.titulo}</h2>
-                                <p style="font-size: 11px; color: #666; margin: 5px 0 0 0;">Agente: ${ficha2.agente}</p>
+                            <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f9f9f9;">
+                              <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 10px;">
+                                <p style="font-size: 10px; font-weight: bold; color: #1e3a5f; margin: 0; margin-bottom: 3px;">Pérez & Funes - Estudio Jurídico · San Luis</p>
+                                <h2 style="font-size: 14px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha2.argumento.split('\n')[0].slice(0, 80)}</h2>
                               </div>
-                              <div style="flex: 1; font-size: 13px; line-height: 1.6; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap;">
+                              <div style="flex: 1; font-size: 12px; line-height: 1.5; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap; max-height: 200px; overflow: hidden;">
                                 ${ficha2.argumento}
+                              </div>
+                              <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #666;">
+                                <p style="margin: 0;">Ficha Nº${pagina * 2} | ${ficha2.agente}</p>
                               </div>
                             </div>
                             ` : ""}
-                            <div style="text-align: center; font-size: 10px; color: #999; padding-top: 15px; border-top: 1px solid #ddd;">
-                              Página ${pagina} de ${totalPaginas}
-                            </div>
                           </div>
                         `;
                       }
@@ -728,14 +731,27 @@ export default function AgenteIA({ caso, documentos }) {
                         <style>
                           * { margin: 0; padding: 0; }
                           body { font-family: 'Arial', sans-serif; color: #222; background: #fff; }
-                          @page { size: A4; margin: 0; }
+                          @page { size: A4; margin: 20mm 20mm; }
                           @media print { 
                             body { margin: 0; padding: 0; }
                             div[style*="page-break-after"] { page-break-after: always; }
                           }
+                          .page-number { position: fixed; bottom: 15mm; right: 20mm; font-size: 10px; color: #999; }
+                          .estudio-header { font-weight: bold; color: #1e3a5f; margin-bottom: 5px; font-size: 10px; }
                         </style>
                       </head><body>
                         ${contenidoFichas}
+                        <script>
+                          let pageNum = 1;
+                          document.querySelectorAll('[style*="page-break-after"]').forEach(el => {
+                            const pageDiv = document.createElement('div');
+                            pageDiv.className = 'page-number';
+                            pageDiv.style.cssText = 'position: absolute; bottom: 15mm; right: 20mm;';
+                            pageDiv.innerHTML = 'Página ' + pageNum;
+                            el.appendChild(pageDiv);
+                            pageNum++;
+                          });
+                        </script>
                       </body></html>`);
                       w.document.close();
                       w.print();
