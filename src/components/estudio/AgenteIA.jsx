@@ -659,7 +659,7 @@ export default function AgenteIA({ caso, documentos }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Historial de análisis ({analisisSeleccionados.size})</h3>
-              {analisisSeleccionados.size > 0 && (
+              {analisis.length > 0 && (
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
