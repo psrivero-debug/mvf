@@ -193,13 +193,21 @@ export default function IndiceCaso({ documentos }) {
     setDigitalizando(prev => ({ ...prev, [doc.id]: true }));
     const resultado = await digitalizarDocumento(doc);
     if (resultado) {
-      const updates = { contenido_texto: resultado.contenido };
+      let contenido_texto = resultado.contenido;
+      // Si el texto es muy largo, subirlo como archivo y guardar solo la URL
+      if (contenido_texto && contenido_texto.length > 50000) {
+        const blob = new Blob([contenido_texto], { type: "text/plain" });
+        const file = new File([blob], `doc_${doc.id}.txt`, { type: "text/plain" });
+        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file });
+        contenido_texto = txt_url;
+      }
+      const updates = { contenido_texto };
       if (resultado.titulo) updates.titulo = resultado.titulo;
       if (resultado.fecha && !doc.fecha_documento) updates.fecha_documento = resultado.fecha;
       await base44.entities.CasoDocumento.update(doc.id, updates);
       queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
       // Generar resumen inmediatamente con el texto nuevo
-      const docActualizado = { ...doc, ...updates };
+      const docActualizado = { ...doc, contenido_texto: resultado.contenido };
       const text = await generarResumen(docActualizado);
       if (text) setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
     }

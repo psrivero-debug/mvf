@@ -123,7 +123,15 @@ export default function DocumentosList({ caso, documentos }) {
         contenido_texto = "";
       }
 
-      // 3. Guardar documento
+      // 3. Subir texto si es muy largo
+      if (contenido_texto && contenido_texto.length > 50000) {
+        const blob = new Blob([contenido_texto], { type: "text/plain" });
+        const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
+        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+        contenido_texto = txt_url;
+      }
+
+      // 4. Guardar documento
       await base44.entities.CasoDocumento.create({
         caso_id: caso.id,
         titulo,
@@ -176,9 +184,18 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
       textoFinal = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
     }
 
+    // Subir texto si es muy largo
+    let textoGuardar = textoFinal;
+    if (textoFinal && textoFinal.length > 50000) {
+      const blob = new Blob([textoFinal], { type: "text/plain" });
+      const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
+      const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+      textoGuardar = txt_url;
+    }
+
     setForm(prev => ({
       ...prev,
-      contenido_texto: textoFinal,
+      contenido_texto: textoGuardar,
       titulo: prev.titulo || tituloSugerido || prev.titulo,
     }));
     setTranscribiendo(false);
