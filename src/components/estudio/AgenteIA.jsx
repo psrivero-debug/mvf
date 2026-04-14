@@ -21,16 +21,20 @@ const agentes = [
     keywords: ["analiz", "document", "cita", "referencia", "qué dice", "contenido", "extrae", "identificá"],
     prompt: (consulta, docsTexto) => `Sos un experto en derecho argentino, especializado en la Provincia de San Luis.
 Analizá los siguientes documentos judiciales y respondé la consulta con precisión jurídica.
-Para cada afirmación importante, indicá de qué documento proviene la cita (entre paréntesis).
-Citá legislación vigente de Argentina y San Luis cuando corresponda.
 Usá lenguaje técnico-jurídico apropiado.
+
+SISTEMA DE CITAS OBLIGATORIO:
+- Cada vez que hagas una afirmación basada en un documento, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
+- Al final de tu respuesta, incluí una sección titulada "**Referencias:**" con la lista numerada de cada cita en el formato:
+  ¹ [Título del documento] — Fuente: [fuente] | Fecha: [fecha si existe]
+- Si citás legislación o jurisprudencia (no documentos del caso), indicalo como: [Ley/Art. X] sin superíndice.
 
 DOCUMENTOS DEL CASO:
 ${docsTexto}
 
 CONSULTA: ${consulta}
 
-Respondé con análisis detallado, citas textuales de los documentos e identificando la fuente de cada afirmación.`,
+Respondé con análisis detallado, usando superíndices en cada afirmación y la lista de referencias al final.`,
   },
   {
     id: "abogado_defensor",
@@ -46,12 +50,18 @@ Analizá los documentos del caso y respondé desde la perspectiva del defensor.
 Citá jurisprudencia de la Provincia de San Luis, Corte Suprema Argentina y legislación vigente.
 Identificá posibles errores procesales, nulidades, o circunstancias atenuantes.
 
+SISTEMA DE CITAS OBLIGATORIO:
+- Cada vez que hagas una afirmación basada en un documento, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
+- Al final de tu respuesta, incluí una sección titulada "**Referencias:**" con la lista numerada de cada cita en el formato:
+  ¹ [Título del documento] — Fuente: [fuente] | Fecha: [fecha si existe]
+- Si citás legislación o jurisprudencia (no documentos del caso), indicalo como: [Ley/Art. X] sin superíndice.
+
 DOCUMENTOS DEL CASO:
 ${docsTexto}
 
 CONSULTA: ${consulta}
 
-Respondé con estrategia defensiva detallada, fundamentos legales y citas de los documentos.`,
+Respondé con estrategia defensiva detallada, usando superíndices en cada afirmación y la lista de referencias al final.`,
   },
   {
     id: "analista",
@@ -66,12 +76,18 @@ Analizá objetivamente el caso, evaluá fortalezas y debilidades de cada parte, 
 Considerá la jurisprudencia local de San Luis, tribunales de alzada y Corte Suprema Argentina.
 Sé objetivo, equilibrado y preciso en tu análisis.
 
+SISTEMA DE CITAS OBLIGATORIO:
+- Cada vez que hagas una afirmación basada en un documento, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
+- Al final de tu respuesta, incluí una sección titulada "**Referencias:**" con la lista numerada de cada cita en el formato:
+  ¹ [Título del documento] — Fuente: [fuente] | Fecha: [fecha si existe]
+- Si citás legislación o jurisprudencia (no documentos del caso), indicalo como: [Ley/Art. X] sin superíndice.
+
 DOCUMENTOS DEL CASO:
 ${docsTexto}
 
 CONSULTA: ${consulta}
 
-Respondé con análisis objetivo indicando la fuente documental de cada dato.`,
+Respondé con análisis objetivo usando superíndices en cada afirmación y la lista de referencias al final.`,
   },
   {
     id: "transcriptor",
@@ -86,12 +102,17 @@ Tu tarea es redactar, resumir o reorganizar información jurídica de manera cla
 Usá el formato correcto para escritos judiciales argentinos cuando corresponda.
 Respetá la legislación vigente y el estilo forense de la Provincia de San Luis.
 
+SISTEMA DE CITAS OBLIGATORIO:
+- Cada vez que uses información de un documento del caso, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
+- Al final de tu respuesta, incluí una sección titulada "**Referencias:**" con la lista numerada de cada cita en el formato:
+  ¹ [Título del documento] — Fuente: [fuente] | Fecha: [fecha si existe]
+
 DOCUMENTOS DEL CASO:
 ${docsTexto}
 
 INSTRUCCIÓN: ${consulta}
 
-Respondé con el texto redactado o resumen solicitado de forma profesional.`,
+Respondé con el texto redactado o resumen solicitado, usando superíndices y referencias al final.`,
   },
   {
     id: "cronologista",
@@ -113,12 +134,17 @@ INSTRUCCIONES:
 - Marcá con 📄 los escritos y presentaciones de partes
 - Al final, destacá cualquier brecha temporal sospechosa o plazo que pueda ser relevante jurídicamente
 
+SISTEMA DE CITAS OBLIGATORIO:
+- Cada evento debe indicar entre corchetes el documento del que proviene: [Doc: "Título del documento"]
+- Al final, incluí una sección "**Referencias:**" con la lista de documentos usados en el formato:
+  ¹ [Título del documento] — Fuente: [fuente] | Fecha: [fecha si existe]
+
 DOCUMENTOS DEL CASO:
 ${docsTexto}
 
 INSTRUCCIÓN ADICIONAL: ${consulta}
 
-Presentá la línea de tiempo en formato claro, ordenada cronológicamente, con cada evento en una línea separada.`,
+Presentá la línea de tiempo en formato claro, ordenada cronológicamente, con cada evento en una línea separada y su fuente documental.`,
   },
   {
     id: "extractor_keywords",
@@ -142,12 +168,17 @@ EXTRAE Y ORGANIZA EN SECCIONES:
 7. **CONCEPTOS JURÍDICOS APLICABLES**: Leyes, artículos, jurisprudencia mencionada o aplicable
 8. **CONTRADICCIONES Y ALERTAS**: Datos inconsistentes, contradicciones entre documentos, puntos débiles ⚠️
 
+SISTEMA DE CITAS OBLIGATORIO:
+- Cada dato extraído debe indicar con superíndice el documento fuente: ¹ ² ³ etc.
+- Al final, incluí una sección "**Referencias:**" con la lista en el formato:
+  ¹ [Título del documento] — Fuente: [fuente] | Fecha: [fecha si existe]
+
 DOCUMENTOS DEL CASO:
 ${docsTexto}
 
 INSTRUCCIÓN ADICIONAL: ${consulta}
 
-Respondé con las secciones bien organizadas y diferenciadas, priorizando exhaustividad y precisión.`,
+Respondé con las secciones bien organizadas, superíndices en cada dato y referencias al final.`,
   },
 ];
 
