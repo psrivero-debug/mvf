@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye, Pencil, Check, X, ScanText, Sparkles, RefreshCw } from "lucide-react";
+import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye, Pencil, Check, X, ScanText, Sparkles, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -120,7 +120,18 @@ export default function IndiceCaso({ documentos }) {
   const [extrayendoFecha, setExtrayendoFecha] = useState({});
   const [digitalizando, setDigitalizando] = useState({});
   const [extrayendoTitulo, setExtrayendoTitulo] = useState({});
+  const [confirmandoBorrar, setConfirmandoBorrar] = useState(null);
   const queryClient = useQueryClient();
+
+  const handleBorrar = async (doc) => {
+    if (confirmandoBorrar === doc.id) {
+      await base44.entities.CasoDocumento.delete(doc.id);
+      queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
+      setConfirmandoBorrar(null);
+    } else {
+      setConfirmandoBorrar(doc.id);
+    }
+  };
 
   const filtered = documentos
     .filter(d => {
@@ -523,6 +534,20 @@ export default function IndiceCaso({ documentos }) {
                       <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                         <Eye className="w-3.5 h-3.5" />
                       </a>
+                    </Button>
+                  )}
+                  {confirmandoBorrar === doc.id ? (
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive border border-destructive/30 hover:bg-destructive/10" onClick={() => handleBorrar(doc)}>
+                        Confirmar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-1 text-muted-foreground" onClick={() => setConfirmandoBorrar(null)}>
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="ghost" title="Borrar documento" onClick={() => handleBorrar(doc)} className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   )}
                 </div>
