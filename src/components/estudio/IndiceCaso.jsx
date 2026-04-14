@@ -160,7 +160,7 @@ export default function IndiceCaso({ documentos }) {
     const resultado = await digitalizarDocumento(doc);
     if (resultado) {
       const updates = { contenido_texto: resultado.contenido };
-      if (resultado.titulo && !doc.titulo) updates.titulo = resultado.titulo;
+      if (resultado.titulo) updates.titulo = resultado.titulo;
       if (resultado.fecha && !doc.fecha_documento) updates.fecha_documento = resultado.fecha;
       await base44.entities.CasoDocumento.update(doc.id, updates);
       queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
