@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil } from "lucide-react";
+import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Files } from "lucide-react";
 
 const tipoDocLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -40,6 +40,7 @@ export default function DocumentosList({ caso, documentos }) {
   const [uploading, setUploading] = useState(false);
   const [transcribiendo, setTranscribiendo] = useState(false);
   const fileInputRef = useRef(null);
+  const bulkInputRef = useRef(null);
   const queryClient = useQueryClient();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["caso_documentos", caso.id] });
@@ -83,6 +84,31 @@ export default function DocumentosList({ caso, documentos }) {
     e.target.value = "";
   };
 
+  const handleBulkUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    for (const file of files) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const tipo = file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : "otro";
+      const nombre = file.name.replace(/\.[^/.]+$/, "");
+      await base44.entities.CasoDocumento.create({
+        caso_id: caso.id,
+        titulo: nombre,
+        tipo_documento: tipo,
+        file_url,
+        fuente: "",
+        fecha_documento: "",
+        notas: "",
+        contenido_texto: "",
+        orden: 0,
+      });
+    }
+    invalidate();
+    setUploading(false);
+    e.target.value = "";
+  };
+
   const handleTranscribir = async () => {
     if (!form.file_url) return;
     setTranscribiendo(true);
@@ -99,11 +125,31 @@ Devolvé solo el texto transcripto sin comentarios adicionales.`,
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <p className="text-sm text-muted-foreground">{documentos.length} documento{documentos.length !== 1 ? "s" : ""}</p>
-        <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-2">
-          <Plus className="w-4 h-4" /> Agregar Documento
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => bulkInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Files className="w-4 h-4" />}
+            {uploading ? "Subiendo..." : "Subir varios archivos"}
+          </Button>
+          <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-2">
+            <Plus className="w-4 h-4" /> Agregar Documento
+          </Button>
+        </div>
+        <input
+          ref={bulkInputRef}
+          type="file"
+          accept="image/*,.pdf"
+          multiple
+          className="hidden"
+          onChange={handleBulkUpload}
+        />
       </div>
 
       {documentos.length === 0 ? (
