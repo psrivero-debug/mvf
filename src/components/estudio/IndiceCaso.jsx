@@ -31,7 +31,7 @@ INSTRUCCIONES ESTRICTAS:
 - Si hay sellos o membretes, transcribilos entre [SELLO: ...].
 - Respetá mayúsculas, puntuación y acentos tal como aparecen.
 - NO resumas, NO omitas nada. Transcribí TODO el texto visible de principio a fin.
-- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [un título descriptivo conciso del documento, máximo 8 palabras].
+- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [el título real del documento tal como figura en el encabezado o cuerpo del texto; si no hay título explícito, escribí una descripción concisa y específica del acto jurídico, máximo 10 palabras. Ejemplos: "Informe de relación de obrados Expte. PEX 323910/22", "Sentencia Definitiva Nº 45/2023", "Escrito de demanda laboral", "Pericia médica accidente de tránsito"].
 - Al final, en otra línea separada, escribí: FECHA SUGERIDA: [la fecha principal del documento en formato YYYY-MM-DD, o null si no hay].
 
 Devolvé ÚNICAMENTE la transcripción completa (con título y fecha al final), sin comentarios ni aclaraciones previas.`;
@@ -71,6 +71,20 @@ ${doc.contenido_texto.slice(0, 3000)}`,
   return resultado || null;
 }
 
+async function extraerTitulo(doc) {
+  if (!doc.contenido_texto || doc.contenido_texto.trim().length < 10) return null;
+  const resultado = await base44.integrations.Core.InvokeLLM({
+    prompt: `Del siguiente texto de un documento jurídico argentino, extraé el título real del documento tal como figura en el encabezado o cuerpo del texto.
+Si no hay título explícito, escribí una descripción concisa y específica del acto jurídico (máximo 10 palabras).
+Ejemplos correctos: "Informe de relación de obrados Expte. PEX 323910/22", "Sentencia Definitiva Nº 45/2023", "Escrito de demanda laboral".
+Devolvé ÚNICAMENTE el título, sin comillas ni explicaciones adicionales.
+
+TEXTO:
+${doc.contenido_texto.slice(0, 2000)}`,
+  });
+  return resultado?.trim() || null;
+}
+
 async function extraerFecha(doc) {
   if (!doc.contenido_texto || doc.contenido_texto.trim().length < 10) return null;
   const resultado = await base44.integrations.Core.InvokeLLM({
@@ -97,6 +111,7 @@ export default function IndiceCaso({ documentos }) {
   const [editando, setEditando] = useState({});
   const [extrayendoFecha, setExtrayendoFecha] = useState({});
   const [digitalizando, setDigitalizando] = useState({});
+  const [extrayendoTitulo, setExtrayendoTitulo] = useState({});
   const queryClient = useQueryClient();
 
   const filtered = documentos
@@ -180,6 +195,17 @@ export default function IndiceCaso({ documentos }) {
       await handleDigitalizar(doc);
     }
     setGenerandoTodos(false);
+  };
+
+  const handleExtraerTitulo = async (doc) => {
+    if (!doc.contenido_texto) return;
+    setExtrayendoTitulo(prev => ({ ...prev, [doc.id]: true }));
+    const titulo = await extraerTitulo(doc);
+    if (titulo) {
+      await base44.entities.CasoDocumento.update(doc.id, { titulo });
+      queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
+    }
+    setExtrayendoTitulo(prev => ({ ...prev, [doc.id]: false }));
   };
 
   const abrirEdicion = (doc) => {
@@ -379,6 +405,19 @@ export default function IndiceCaso({ documentos }) {
                         >
                           <Pencil className="w-3 h-3 text-muted-foreground" />
                         </button>
+                        {doc.contenido_texto && (
+                          <button
+                            onClick={() => handleExtraerTitulo(doc)}
+                            disabled={extrayendoTitulo[doc.id]}
+                            className="opacity-0 group-hover/titulo:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted disabled:opacity-40"
+                            title="Extraer título real del texto con IA"
+                          >
+                            {extrayendoTitulo[doc.id]
+                              ? <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                              : <Sparkles className="w-3 h-3 text-primary" />
+                            }
+                          </button>
+                        )}
                       </div>
                       {doc.tipo_documento && (
                         <Badge className={`${tipoColors[doc.tipo_documento]} text-xs py-0`} variant="secondary">
