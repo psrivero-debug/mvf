@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye } from "lucide-react";
+import { Search, FileText, Calendar, ArrowUpDown, Loader2, Eye, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const tipoLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -38,9 +39,11 @@ export default function IndiceCaso({ documentos }) {
   const [search, setSearch] = useState("");
   const [tipoFilter, setTipoFilter] = useState("all");
   const [sortBy, setSortBy] = useState("orden");
-  // resumenes[docId] = { loading: bool, text: string | null }
   const [resumenes, setResumenes] = useState({});
   const [generandoTodos, setGenerandoTodos] = useState(false);
+  // editando[docId] = string (nuevo título)
+  const [editando, setEditando] = useState({});
+  const queryClient = useQueryClient();
 
   const filtered = documentos
     .filter(d => {
@@ -94,6 +97,15 @@ export default function IndiceCaso({ documentos }) {
       setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
     }
     setGenerandoTodos(false);
+  };
+
+  const guardarTitulo = async (doc) => {
+    const nuevoTitulo = editando[doc.id]?.trim();
+    if (nuevoTitulo && nuevoTitulo !== doc.titulo) {
+      await base44.entities.CasoDocumento.update(doc.id, { titulo: nuevoTitulo });
+      queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
+    }
+    setEditando(prev => { const n = {...prev}; delete n[doc.id]; return n; });
   };
 
   if (documentos.length === 0) {
@@ -170,7 +182,36 @@ export default function IndiceCaso({ documentos }) {
                 <div className="flex-1 min-w-0 space-y-1">
                   {/* Título + tipo + fecha */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-sm">{doc.titulo}</span>
+                    {editando[doc.id] !== undefined ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editando[doc.id]}
+                          onChange={e => setEditando(prev => ({ ...prev, [doc.id]: e.target.value }))}
+                          className="h-7 text-sm w-64"
+                          autoFocus
+                          onKeyDown={e => {
+                            if (e.key === "Enter") guardarTitulo(doc);
+                            if (e.key === "Escape") setEditando(prev => { const n = {...prev}; delete n[doc.id]; return n; });
+                          }}
+                        />
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600" onClick={() => guardarTitulo(doc)}>
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setEditando(prev => { const n = {...prev}; delete n[doc.id]; return n; })}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 group/titulo">
+                        <span className="font-semibold text-sm">{doc.titulo}</span>
+                        <button
+                          onClick={() => setEditando(prev => ({ ...prev, [doc.id]: doc.titulo }))}
+                          className="opacity-0 group-hover/titulo:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                        >
+                          <Pencil className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                    )}
                     {doc.tipo_documento && (
                       <Badge className={`${tipoColors[doc.tipo_documento]} text-xs py-0`} variant="secondary">
                         {tipoLabels[doc.tipo_documento]}
