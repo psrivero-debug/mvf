@@ -680,7 +680,6 @@ export default function AgenteIA({ caso, documentos }) {
                       const fichas = analisisConTexto.map(a => {
                         const ag = agentes.find(ag => ag.id === a.agente);
                         return {
-                          titulo: a.consulta,
                           agente: ag?.label || "Agente",
                           argumento: a.textoResuelto,
                         };
@@ -699,9 +698,8 @@ export default function AgenteIA({ caso, documentos }) {
                             <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f9f9f9;">
                               <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 10px;">
                                 <p style="font-size: 10px; font-weight: bold; color: #1e3a5f; margin: 0; margin-bottom: 3px;">Pérez & Funes - Estudio Jurídico · San Luis</p>
-                                <h2 style="font-size: 14px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha1.argumento.split('\n')[0].slice(0, 80)}</h2>
                               </div>
-                              <div style="flex: 1; font-size: 12px; line-height: 1.5; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap; max-height: 200px; overflow: hidden;">
+                              <div style="flex: 1; font-size: 12px; line-height: 1.5; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap; max-height: 220px; overflow: hidden;">
                                 ${ficha1.argumento}
                               </div>
                               <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #666;">
@@ -712,9 +710,8 @@ export default function AgenteIA({ caso, documentos }) {
                             <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f9f9f9;">
                               <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 10px;">
                                 <p style="font-size: 10px; font-weight: bold; color: #1e3a5f; margin: 0; margin-bottom: 3px;">Pérez & Funes - Estudio Jurídico · San Luis</p>
-                                <h2 style="font-size: 14px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha2.argumento.split('\n')[0].slice(0, 80)}</h2>
                               </div>
-                              <div style="flex: 1; font-size: 12px; line-height: 1.5; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap; max-height: 200px; overflow: hidden;">
+                              <div style="flex: 1; font-size: 12px; line-height: 1.5; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap; max-height: 220px; overflow: hidden;">
                                 ${ficha2.argumento}
                               </div>
                               <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #666;">
