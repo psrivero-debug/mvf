@@ -34,6 +34,21 @@ ${doc.contenido_texto.slice(0, 3000)}`,
   return resultado || null;
 }
 
+async function extraerFecha(doc) {
+  if (!doc.contenido_texto || doc.contenido_texto.trim().length < 10) return null;
+  const resultado = await base44.integrations.Core.InvokeLLM({
+    prompt: `Del siguiente texto de un documento jurídico argentino, extraé la fecha principal del documento (la fecha en que fue emitido, firmado o fechado).
+Devolvé ÚNICAMENTE la fecha en formato YYYY-MM-DD. Si no encontrás ninguna fecha, devolvé la palabra null.
+No agregues ningún otro texto ni explicación.
+
+TEXTO:
+${doc.contenido_texto.slice(0, 2000)}`,
+  });
+  const fecha = resultado?.trim();
+  if (!fecha || fecha === "null" || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
+  return fecha;
+}
+
 export default function IndiceCaso({ documentos }) {
   const [search, setSearch] = useState("");
   const [tipoFilter, setTipoFilter] = useState("all");
@@ -42,7 +57,8 @@ export default function IndiceCaso({ documentos }) {
   const [fechaHasta, setFechaHasta] = useState("");
   const [resumenes, setResumenes] = useState({});
   const [generandoTodos, setGenerandoTodos] = useState(false);
-  const [editando, setEditando] = useState({}); // { docId: { titulo, fecha_documento } }
+  const [editando, setEditando] = useState({});
+  const [extrayendoFecha, setExtrayendoFecha] = useState({});
   const queryClient = useQueryClient();
 
   const filtered = documentos
@@ -102,6 +118,17 @@ export default function IndiceCaso({ documentos }) {
 
   const abrirEdicion = (doc) => {
     setEditando(prev => ({ ...prev, [doc.id]: { titulo: doc.titulo || "", fecha_documento: doc.fecha_documento || "" } }));
+  };
+
+  const handleExtraerFecha = async (doc) => {
+    if (!doc.contenido_texto) return;
+    setExtrayendoFecha(prev => ({ ...prev, [doc.id]: true }));
+    const fecha = await extraerFecha(doc);
+    if (fecha) {
+      await base44.entities.CasoDocumento.update(doc.id, { fecha_documento: fecha });
+      queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
+    }
+    setExtrayendoFecha(prev => ({ ...prev, [doc.id]: false }));
   };
 
   const cancelarEdicion = (docId) => {
@@ -269,10 +296,15 @@ export default function IndiceCaso({ documentos }) {
                         </span>
                       ) : (
                         <button
-                          onClick={() => abrirEdicion(doc)}
-                          className="flex items-center gap-1 text-xs text-muted-foreground/50 italic hover:text-muted-foreground transition-colors"
+                          onClick={() => handleExtraerFecha(doc)}
+                          disabled={extrayendoFecha[doc.id] || !doc.contenido_texto}
+                          className="flex items-center gap-1 text-xs text-primary/60 italic hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={doc.contenido_texto ? "Extraer fecha del documento con IA" : "Sin texto transcripto"}
                         >
-                          <Calendar className="w-3 h-3" /> Sin fecha — click para agregar
+                          {extrayendoFecha[doc.id]
+                            ? <><Loader2 className="w-3 h-3 animate-spin" /> Extrayendo fecha...</>
+                            : <><Calendar className="w-3 h-3" /> {doc.contenido_texto ? "Extraer fecha con IA" : "Sin fecha"}</>
+                          }
                         </button>
                       )}
                     </div>
