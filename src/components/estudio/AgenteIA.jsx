@@ -605,8 +605,7 @@ export default function AgenteIA({ caso, documentos }) {
                           if (texto.startsWith("http://") || texto.startsWith("https://")) {
                             try { texto = await fetch(texto).then(r => r.text()); } catch {}
                           }
-                          const primeraLinea = texto.split('\n')[0].substring(0, 100);
-                          return { ...a, textoResuelto: texto, argumento: primeraLinea };
+                          return { ...a, textoResuelto: texto };
                         })
                       );
 
@@ -615,7 +614,7 @@ export default function AgenteIA({ caso, documentos }) {
                         return {
                           titulo: a.consulta,
                           agente: ag?.label || "Agente",
-                          argumento: a.argumento,
+                          argumento: a.textoResuelto,
                         };
                       });
 
