@@ -65,16 +65,27 @@ Respondé con estrategia defensiva detallada, usando superíndices en cada afirm
   },
   {
     id: "analista",
-    label: "Analista Jurídico",
+    label: "Justua",
     icon: Scale,
     color: "bg-purple-100 text-purple-700",
     borderColor: "border-purple-400",
     descripcion: "Análisis objetivo e imparcial del caso, probabilidades",
     keywords: ["probabilidad", "chance", "posibilidad", "objetivo", "imparcial", "fortaleza", "debilidad", "resultado", "ganamos", "perdem"],
-    prompt: (consulta, docsTexto) => `Sos un analista jurídico imparcial experto en derecho argentino, Provincia de San Luis.
-Analizá objetivamente el caso, evaluá fortalezas y debilidades de cada parte, y estimá probabilidades de resultado.
-Considerá la jurisprudencia local de San Luis, tribunales de alzada y Corte Suprema Argentina.
-Sé objetivo, equilibrado y preciso en tu análisis.
+    prompt: (consulta, docsTexto, escalaFavor) => `Sos Justua, un agente jurídico experto en derecho argentino, Provincia de San Luis.
+Tu tarea es analizar el caso de forma objetiva e imparcial, evaluando fortalezas y debilidades de cada parte.
+
+DATOS DEL CASO PROPORCIONADOS:
+- Balance actual: ${escalaFavor > 0 ? `Favorable al Demandado (+${escalaFavor})` : escalaFavor < 0 ? `Favorable al Demandante (${escalaFavor})` : 'Neutro (0)'}
+- Fortalezas identificadas: ${Math.abs(escalaFavor)} puntos
+- Debilidades: ${10 - Math.abs(escalaFavor)} puntos
+- Parte favorecida: ${escalaFavor > 0 ? 'Demandado' : escalaFavor < 0 ? 'Demandante' : 'Ninguna (equilibrado)'}
+
+INSTRUCCIONES:
+1. Considerá los datos proporcionados como base del análisis
+2. Evaluá la jurisprudencia local de San Luis, tribunales de alzada y Corte Suprema Argentina
+3. Calcula la probabilidad de éxito considerando el balance actual
+4. Proporciona un análisis equilibrado y detallado
+5. Indica qué aspectos podrían cambiar el resultado actual
 
 SISTEMA DE CITAS OBLIGATORIO:
 - Cada vez que hagas una afirmación basada en un documento, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
@@ -449,7 +460,9 @@ export default function AgenteIA({ caso, documentos }) {
     for (const agenteId of agentesIds) {
       setConsultandoIdx(agenteId);
       const agenteConfig = agentes.find(a => a.id === agenteId);
-      const promptFinal = agenteConfig.prompt(consultaTexto, docsTexto);
+      const promptFinal = agenteId === "analista" 
+        ? agenteConfig.prompt(consultaTexto, docsTexto, escalaFavor)
+        : agenteConfig.prompt(consultaTexto, docsTexto);
       let respuesta = await base44.integrations.Core.InvokeLLM({
         prompt: promptFinal,
         model: "claude_sonnet_4_6",
