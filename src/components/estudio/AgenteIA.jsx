@@ -926,10 +926,6 @@ export default function AgenteIA({ caso, documentos }) {
                                       <span>${caso.titulo}</span>
                                     </div>
                                     <div class="metadata-row">
-                                      <span class="metadata-label">Consulta:</span>
-                                      <span>${a.consulta}</span>
-                                    </div>
-                                    <div class="metadata-row">
                                       <span class="metadata-label">Fecha:</span>
                                       <span>${hoy}</span>
                                     </div>
