@@ -610,10 +610,14 @@ export default function AgenteIA({ caso, documentos }) {
                         })
                       );
 
-                      const fichas = analisisConTexto.map(a => ({
-                        titulo: a.consulta,
-                        argumento: a.argumento,
-                      }));
+                      const fichas = analisisConTexto.map(a => {
+                        const ag = agentes.find(ag => ag.id === a.agente);
+                        return {
+                          titulo: a.consulta,
+                          agente: ag?.label || "Agente",
+                          argumento: a.argumento,
+                        };
+                      });
 
                       const totalPaginas = Math.ceil(fichas.length / 2);
                       let contenidoFichas = "";
@@ -628,6 +632,7 @@ export default function AgenteIA({ caso, documentos }) {
                             <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
                               <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px;">
                                 <h2 style="font-size: 16px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha1.titulo}</h2>
+                                <p style="font-size: 11px; color: #666; margin: 5px 0 0 0;">Agente: ${ficha1.agente}</p>
                               </div>
                               <div style="flex: 1; font-size: 13px; line-height: 1.6; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap;">
                                 ${ficha1.argumento}
@@ -637,6 +642,7 @@ export default function AgenteIA({ caso, documentos }) {
                             <div style="flex: 1; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #f9f9f9;">
                               <div style="border-bottom: 2px solid #1e3a5f; padding-bottom: 12px;">
                                 <h2 style="font-size: 16px; font-weight: bold; color: #1e3a5f; margin: 0;">${ficha2.titulo}</h2>
+                                <p style="font-size: 11px; color: #666; margin: 5px 0 0 0;">Agente: ${ficha2.agente}</p>
                               </div>
                               <div style="flex: 1; font-size: 13px; line-height: 1.6; color: #333; font-family: Arial, sans-serif; white-space: pre-wrap;">
                                 ${ficha2.argumento}
