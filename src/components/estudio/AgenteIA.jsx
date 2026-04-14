@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -191,6 +191,27 @@ const accionesRapidas = [
   },
 ];
 
+function RespuestaAnalisis({ respuesta }) {
+  const [texto, setTexto] = useState(null);
+
+  useEffect(() => {
+    if (!respuesta) return;
+    if (respuesta.startsWith("http://") || respuesta.startsWith("https://")) {
+      fetch(respuesta).then(r => r.text()).then(setTexto).catch(() => setTexto(respuesta));
+    } else {
+      setTexto(respuesta);
+    }
+  }, [respuesta]);
+
+  if (!texto) return <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-3"><Loader2 className="w-3 h-3 animate-spin" /> Cargando respuesta...</div>;
+
+  return (
+    <div className="prose prose-sm max-w-none text-sm border-t pt-3">
+      <ReactMarkdown>{texto}</ReactMarkdown>
+    </div>
+  );
+}
+
 function sugerirAgentes(consulta) {
   if (!consulta || consulta.trim().length < 5) return [];
   const lower = consulta.toLowerCase();
@@ -274,10 +295,17 @@ export default function AgenteIA({ caso, documentos }) {
       setConsultandoIdx(agenteId);
       const agenteConfig = agentes.find(a => a.id === agenteId);
       const promptFinal = agenteConfig.prompt(consultaTexto, docsTexto);
-      const respuesta = await base44.integrations.Core.InvokeLLM({
+      let respuesta = await base44.integrations.Core.InvokeLLM({
         prompt: promptFinal,
         model: "claude_sonnet_4_6",
       });
+      // Si la respuesta es muy larga, subirla como archivo y guardar la URL
+      if (respuesta && respuesta.length > 8000) {
+        const blob = new Blob([respuesta], { type: "text/plain" });
+        const txtFile = new File([blob], `analisis_${Date.now()}.txt`, { type: "text/plain" });
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+        respuesta = file_url;
+      }
       await base44.entities.CasoAnalisis.create({
         caso_id: caso.id,
         agente: agenteId,
@@ -458,9 +486,7 @@ export default function AgenteIA({ caso, documentos }) {
                       </Button>
                     </div>
                     {a.respuesta && (
-                      <div className="prose prose-sm max-w-none text-sm border-t pt-3">
-                        <ReactMarkdown>{a.respuesta}</ReactMarkdown>
-                      </div>
+                      <RespuestaAnalisis respuesta={a.respuesta} />
                     )}
                   </CardContent>
                 </Card>
