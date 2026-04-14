@@ -637,7 +637,7 @@ export default function AgenteIA({ caso, documentos }) {
                 : `Consultar${agentesSeleccionados.length > 1 ? ` (${agentesSeleccionados.length} agentes)` : ""}`
               }
             </Button>
-            {agentesSeleccionados.includes("analista") && !consulta.trim() && (
+            {agentesSeleccionados.includes("analista") && (
               <Button 
                 onClick={() => ejecutarConsulta("Realizá un análisis completo del caso considerando el balance actual.", ["analista"])}
                 disabled={isPending}
