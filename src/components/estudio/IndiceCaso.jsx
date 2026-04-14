@@ -484,6 +484,18 @@ export default function IndiceCaso({ documentos }) {
                   {doc.notas && (
                     <p className="text-xs text-muted-foreground italic">{doc.notas}</p>
                   )}
+
+                  {/* Leer completo */}
+                  {doc.contenido_texto && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-primary cursor-pointer hover:underline select-none w-fit">
+                        Leer completo
+                      </summary>
+                      <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border leading-relaxed">
+                        {doc.contenido_texto}
+                      </div>
+                    </details>
+                  )}
                 </div>
 
                 {/* Acciones derecha */}
