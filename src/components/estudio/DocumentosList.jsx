@@ -124,7 +124,7 @@ export default function DocumentosList({ caso, documentos }) {
       }
 
       // 3. Subir texto si es muy largo
-      if (contenido_texto && contenido_texto.length > 100000) {
+      if (contenido_texto && contenido_texto.length > 30000) {
         const blob = new Blob([contenido_texto], { type: "text/plain" });
         const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
         const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
@@ -186,7 +186,7 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
 
     // Subir texto si es muy largo
     let textoGuardar = textoFinal;
-    if (textoFinal && textoFinal.length > 100000) {
+    if (textoFinal && textoFinal.length > 30000) {
       const blob = new Blob([textoFinal], { type: "text/plain" });
       const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
       const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
