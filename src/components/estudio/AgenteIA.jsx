@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square, Clock, Tag, Zap } from "lucide-react";
+import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square, Clock, Tag, Zap, Printer } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import Anotaciones from "./Anotaciones";
 
@@ -512,9 +512,41 @@ export default function AgenteIA({ caso, documentos }) {
                         {ag && <Badge className={ag.color} variant="secondary">{ag.label}</Badge>}
                         <p className="text-sm font-medium">{a.consulta}</p>
                       </div>
-                      <Button size="sm" variant="ghost" className="text-destructive shrink-0" onClick={() => deleteMutation.mutate(a.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-foreground"
+                          title="Imprimir análisis"
+                          onClick={async () => {
+                            let texto = a.respuesta || "";
+                            if (texto.startsWith("http://") || texto.startsWith("https://")) {
+                              try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                            }
+                            const w = window.open("", "_blank");
+                            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 40px; color: #222; max-width: 800px; margin: 0 auto; }
+                                h1 { font-size: 18px; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; }
+                                .meta { font-size: 12px; color: #666; margin-bottom: 20px; }
+                                pre { white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.7; }
+                                @media print { button { display: none; } }
+                              </style>
+                            </head><body>
+                              <h1>${ag?.label || "Análisis"}</h1>
+                              <div class="meta">Consulta: ${a.consulta} · Caso: ${caso.titulo}</div>
+                              <pre>${texto}</pre>
+                            </body></html>`);
+                            w.document.close();
+                            w.print();
+                          }}
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(a.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     {a.respuesta && (
                       <RespuestaAnalisis respuesta={a.respuesta} />
