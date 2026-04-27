@@ -6,350 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, Printer, Copy, ChevronDown, ChevronUp, Sparkles, Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-
-const MARCO_NORMATIVO = `
-=== MARCO NORMATIVO APLICABLE (PROVINCIA DE SAN LUIS) ===
-- Código de Familia de San Luis (Ley I-0007-2004)
-- Código Procesal Civil y Comercial de San Luis (Ley I-0002-2004)
-- Código Procesal Penal de San Luis (Ley II-0009-2005)
-- Código Procesal Laboral de San Luis (Ley I-0783-2004)
-- Ley de Contrato de Trabajo (Ley 20.744)
-=== FIN MARCO NORMATIVO ===
-`;
-
-const modelos = [
-  {
-    id: "demanda",
-    label: "Demanda",
-    color: "bg-blue-100 text-blue-700",
-    descripcion: "Escrito inicial de demanda judicial",
-    prompt: (caso, extra) => `Redactá una DEMANDA JUDICIAL completa y formal para la Justicia de la Provincia de San Luis, siguiendo el formato y estilo forense local.
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente/Actor: ${caso.client_name || "—"}
-- Tipo de caso: ${caso.tipo_caso || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-- Número de expediente: ${caso.numero_expediente || "A iniciar"}
-${extra ? `\nInstrucciones adicionales: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (juzgado, autos, carátula)
-2. I. OBJETO (pretensión concreta)
-3. II. HECHOS (numerados, cronológicos, detallados)
-4. III. DERECHO (fundamentos legales, artículos aplicables según el marco normativo de San Luis)
-5. IV. PRUEBA (documental, testimonial, pericial según corresponda)
-6. V. PETITORIO (lo que se pide al juzgado, numerado)
-7. Firma y datos del letrado
-
-Usá lenguaje forense formal. Completá con [COMPLETAR: descripción] los campos que requieran datos específicos del caso.`,
-  },
-  {
-    id: "contestacion",
-    label: "Contestación de Demanda",
-    color: "bg-green-100 text-green-700",
-    descripcion: "Escrito de contestación a una demanda recibida",
-    prompt: (caso, extra) => `Redactá una CONTESTACIÓN DE DEMANDA completa y formal para la Justicia de la Provincia de San Luis.
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente/Demandado: ${caso.client_name || "—"}
-- Tipo de caso: ${caso.tipo_caso || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nInstrucciones adicionales: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado
-2. I. OBJETO (contestar demanda, negar hechos)
-3. II. NIEGA (negación específica de cada hecho de la demanda)
-4. III. HECHOS DE LA DEFENSA (versión del demandado)
-5. IV. DERECHO (fundamentos legales y excepciones aplicables)
-6. V. EXCEPCIONES (si corresponden: prescripción, falta de legitimación, etc.)
-7. VI. PRUEBA
-8. VII. PETITORIO
-9. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR: descripción] los campos que requieran datos específicos.`,
-  },
-  {
-    id: "medida_cautelar",
-    label: "Medida Cautelar",
-    color: "bg-orange-100 text-orange-700",
-    descripcion: "Solicitud de medida cautelar (embargo, inhibición, etc.)",
-    prompt: (caso, extra) => `Redactá un escrito de MEDIDA CAUTELAR para la Justicia de la Provincia de San Luis, conforme al art. 230 y ss. del CPCC San Luis.
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente: ${caso.client_name || "—"}
-- Tipo de caso: ${caso.tipo_caso || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nTipo de cautelar y motivo: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado
-2. I. OBJETO (tipo de medida cautelar solicitada)
-3. II. VEROSIMILITUD DEL DERECHO (fumus boni iuris)
-4. III. PELIGRO EN LA DEMORA (periculum in mora)
-5. IV. CONTRACAUTELA ofrecida
-6. V. DERECHO (art. 230 y ss. CPCC San Luis y normas aplicables)
-7. VI. PETITORIO
-8. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "recurso_apelacion",
-    label: "Recurso de Apelación",
-    color: "bg-purple-100 text-purple-700",
-    descripcion: "Recurso de apelación contra resolución o sentencia",
-    prompt: (caso, extra) => `Redactá un RECURSO DE APELACIÓN completo para la Justicia de la Provincia de San Luis.
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente/Recurrente: ${caso.client_name || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Cámara de Apelaciones de San Luis"}
-- Partes: ${caso.partes || "—"}
-${extra ? `\nResolución impugnada y agravios: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (Excma. Cámara de Apelaciones)
-2. I. OBJETO (interposición del recurso)
-3. II. ADMISIBILIDAD (plazo, forma, legitimación)
-4. III. HECHOS RELEVANTES
-5. IV. AGRAVIOS (cada agravio numerado y fundado)
-6. V. DERECHO
-7. VI. PETITORIO (revocación o modificación)
-8. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "denuncia_penal",
-    label: "Denuncia Penal",
-    color: "bg-red-100 text-red-700",
-    descripcion: "Denuncia penal ante Fiscalía o Juzgado de instrucción",
-    prompt: (caso, extra) => `Redactá una DENUNCIA PENAL formal ante la Fiscalía de la Provincia de San Luis, conforme al CPP San Luis (Ley II-0009-2005).
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Denunciante/Cliente: ${caso.client_name || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Fiscalía competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nHechos delictivos y calificación: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (Fiscalía / Juzgado)
-2. I. DATOS DEL DENUNCIANTE
-3. II. DATOS DEL DENUNCIADO
-4. III. HECHOS (relato cronológico y detallado)
-5. IV. CALIFICACIÓN LEGAL (tipo penal aplicable)
-6. V. PRUEBA OFRECIDA
-7. VI. PETITORIO (investigación, medidas de protección si corresponde)
-8. Firma
-
-Usá lenguaje formal. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "carta_documento",
-    label: "Carta Documento",
-    color: "bg-yellow-100 text-yellow-700",
-    descripcion: "Carta documento fehaciente extrajudicial",
-    prompt: (caso, extra) => `Redactá una CARTA DOCUMENTO extrajudicial, con tono formal y fehaciente, conforme al derecho argentino.
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Remitente/Cliente: ${caso.client_name || "—"}
-- Destinatario: ${caso.partes || "[COMPLETAR: destinatario]"}
-- Tipo de asunto: ${caso.tipo_caso || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nMotivo y reclamo: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Lugar y fecha
-2. Datos del destinatario
-3. Me dirijo a Ud. en mi carácter de...
-4. OBJETO (intimación, reclamo, notificación)
-5. HECHOS que motivan la carta
-6. FUNDAMENTO LEGAL
-7. INTIMACIÓN concreta con plazo
-8. Consecuencias del incumplimiento
-9. Firma y aclaración
-
-Usá tono formal, directo y fehaciente. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "proceso_ordinario",
-    label: "Proceso Ordinario",
-    color: "bg-indigo-100 text-indigo-700",
-    descripcion: "Demanda en proceso de conocimiento ordinario",
-    prompt: (caso, extra) => `Redactá una DEMANDA en PROCESO ORDINARIO completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004).
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente/Actor: ${caso.client_name || "—"}
-- Tipo de caso: ${caso.tipo_caso || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nInstrucciones adicionales: ${extra}` : ""}
-
-El proceso ordinario es el de mayor amplitud probatoria y plazos más extensos (contestación 15 días hábiles). Usarlo cuando la complejidad o el monto del caso así lo justifique.
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (juzgado, autos, carátula — PROCESO ORDINARIO)
-2. I. OBJETO
-3. II. HECHOS (numerados y detallados)
-4. III. DERECHO
-5. IV. PRUEBA (amplia: documental, testimonial, pericial, informativa, reconocimiento judicial)
-6. V. PETITORIO
-7. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR: descripción] los campos que requieran datos específicos.`,
-  },
-  {
-    id: "proceso_ejecutivo",
-    label: "Proceso Ejecutivo",
-    color: "bg-cyan-100 text-cyan-700",
-    descripcion: "Demanda ejecutiva por título ejecutivo (cheque, pagaré, etc.)",
-    prompt: (caso, extra) => `Redactá una DEMANDA EJECUTIVA completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004), arts. 520 y ss.
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Ejecutante/Cliente: ${caso.client_name || "—"}
-- Ejecutado: ${caso.partes || "[COMPLETAR: ejecutado]"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nTítulo ejecutivo y monto: ${extra}` : ""}
-
-El proceso ejecutivo procede cuando existe un título ejecutivo (cheque, pagaré, sentencia, escritura, etc.) que trae aparejada ejecución.
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (PROCESO EJECUTIVO)
-2. I. OBJETO (cobro ejecutivo del título)
-3. II. TÍTULO EJECUTIVO (descripción, monto, vencimiento)
-4. III. HECHOS (mora, incumplimiento)
-5. IV. DERECHO (arts. 520 y ss. CPCC San Luis, normativa del título)
-6. V. MEDIDA CAUTELAR (embargo preventivo sobre bienes del ejecutado)
-7. VI. PETITORIO (librar mandamiento de intimación de pago y embargo)
-8. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "proceso_sumario",
-    label: "Proceso Sumario",
-    color: "bg-amber-100 text-amber-700",
-    descripcion: "Demanda en proceso sumario (plazos y prueba reducidos)",
-    prompt: (caso, extra) => `Redactá una DEMANDA en PROCESO SUMARIO completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004).
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente/Actor: ${caso.client_name || "—"}
-- Tipo de caso: ${caso.tipo_caso || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nInstrucciones adicionales: ${extra}` : ""}
-
-El proceso sumario tiene plazos y etapas probatorias más reducidas que el ordinario. Se usa para causas de mediana complejidad o monto determinado por ley.
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (PROCESO SUMARIO)
-2. I. OBJETO
-3. II. HECHOS (numerados, concisos)
-4. III. DERECHO
-5. IV. PRUEBA (documental y testimonial principalmente)
-6. V. PETITORIO
-7. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "proceso_sumarisimo",
-    label: "Proceso Sumarísimo",
-    color: "bg-rose-100 text-rose-700",
-    descripcion: "Demanda en proceso sumarísimo (urgente, plazos mínimos)",
-    prompt: (caso, extra) => `Redactá una DEMANDA en PROCESO SUMARÍSIMO completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004).
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Carátula: ${caso.titulo}
-- Cliente/Actor: ${caso.client_name || "—"}
-- Tipo de caso: ${caso.tipo_caso || "—"}
-- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
-- Partes: ${caso.partes || "—"}
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nMotivo de urgencia y reclamo: ${extra}` : ""}
-
-El proceso sumarísimo es el más ágil (contestación 5 días hábiles). Se usa para causas urgentes: desalojo, amparo, alimentos provisorios, medidas urgentes de familia.
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (PROCESO SUMARÍSIMO — indicar urgencia)
-2. I. OBJETO (con énfasis en la urgencia)
-3. II. HECHOS (breve y concreto)
-4. III. URGENCIA Y VEROSIMILITUD DEL DERECHO
-5. IV. DERECHO
-6. V. PRUEBA (reducida)
-7. VI. PETITORIO (con solicitud de resolución urgente)
-8. Firma
-
-Usá lenguaje forense formal y destacá la urgencia. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-  {
-    id: "escrito_laboral",
-    label: "Demanda Laboral",
-    color: "bg-teal-100 text-teal-700",
-    descripcion: "Demanda laboral ante la Cámara del Trabajo de San Luis",
-    prompt: (caso, extra) => `Redactá una DEMANDA LABORAL completa ante la Cámara del Trabajo de la Provincia de San Luis, conforme al CPL San Luis (Ley I-0783-2004) y la LCT (Ley 20.744).
-
-${MARCO_NORMATIVO}
-
-DATOS DEL CASO:
-- Trabajador/Cliente: ${caso.client_name || "—"}
-- Empleador/Demandado: ${caso.partes || "[COMPLETAR: empleador]"}
-- Jurisdicción: Cámara del Trabajo de San Luis
-- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
-${extra ? `\nConcepto reclamado y liquidación: ${extra}` : ""}
-
-ESTRUCTURA REQUERIDA:
-1. Encabezado (Excma. Cámara del Trabajo)
-2. I. DATOS DE LAS PARTES
-3. II. OBJETO (conceptos reclamados y montos estimados)
-4. III. HECHOS (relación laboral, antigüedad, despido, hechos relevantes)
-5. IV. LIQUIDACIÓN (indemnización art. 245 LCT, preaviso, vacaciones, SAC, etc.)
-6. V. DERECHO (LCT, CPL San Luis, art. 14 bis CN)
-7. VI. PRUEBA
-8. VII. PETITORIO
-9. Firma
-
-Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
-  },
-];
+import { GRUPOS_MODELOS, TODOS_MODELOS } from "./modelos-escritos-data";
 
 const AGENTE_LABELS = {
   lector_juridico: "Lector Jurídico",
@@ -378,7 +35,6 @@ export default function ModelosEscritos({ caso, documentos }) {
     setLoading(true);
     setResultado(null);
 
-    // Resolver textos de análisis (pueden ser URLs)
     const analisisConTexto = await Promise.all(
       analisis.map(async (a) => {
         let texto = a.respuesta || "";
@@ -389,7 +45,6 @@ export default function ModelosEscritos({ caso, documentos }) {
       })
     );
 
-    // Construir bloque de análisis previos
     const analisisTexto = analisisConTexto.length > 0
       ? "\n\n=== ANÁLISIS PREVIOS REALIZADOS POR AGENTES IA ===\n" +
         analisisConTexto.map(a =>
@@ -398,13 +53,12 @@ export default function ModelosEscritos({ caso, documentos }) {
         "\n=== FIN DE ANÁLISIS ==="
       : "";
 
-    // Enriquecer con documentos
     const docsTexto = documentos.length > 0
-      ? "\n\nDOCUMENTOS DEL CASO DISPONIBLES:\n" +
+      ? "\n\nDOCUMENTOS DEL CASO:\n" +
         documentos.map(d => `- ${d.titulo}${d.contenido_texto ? `: ${d.contenido_texto.slice(0, 400)}...` : ""}`).join("\n")
       : "";
 
-    const modelo = modelos.find(m => m.id === modeloSeleccionado);
+    const modelo = TODOS_MODELOS.find(m => m.id === modeloSeleccionado);
     const prompt = modelo.prompt(caso, instrucciones) + analisisTexto + docsTexto;
 
     const respuesta = await base44.integrations.Core.InvokeLLM({
@@ -426,7 +80,7 @@ export default function ModelosEscritos({ caso, documentos }) {
 
   const handleImprimir = () => {
     if (!resultado) return;
-    const modelo = modelos.find(m => m.id === modeloSeleccionado);
+    const modelo = TODOS_MODELOS.find(m => m.id === modeloSeleccionado);
     const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
     const w = window.open("", "_blank");
     w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -468,34 +122,43 @@ export default function ModelosEscritos({ caso, documentos }) {
     w.print();
   };
 
+  const modeloActual = TODOS_MODELOS.find(m => m.id === modeloSeleccionado);
+
   return (
     <div className="space-y-6">
-      {/* Selector de modelo */}
-      <div>
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+      {/* Selector agrupado */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Seleccioná el tipo de escrito
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {modelos.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => { setModeloSeleccionado(m.id); setResultado(null); }}
-              className={`p-3 rounded-xl border-2 text-left transition-all ${
-                modeloSeleccionado === m.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40 bg-background"
-              }`}
-            >
-              <Badge className={`${m.color} text-[10px] mb-1.5`} variant="secondary">{m.label}</Badge>
-              <p className="text-xs text-muted-foreground leading-tight">{m.descripcion}</p>
-            </button>
-          ))}
-        </div>
+        {GRUPOS_MODELOS.map((grupo) => (
+          <div key={grupo.label}>
+            <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-2 border-b pb-1">
+              {grupo.label}
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {grupo.modelos.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => { setModeloSeleccionado(m.id); setResultado(null); }}
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    modeloSeleccionado === m.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40 bg-background"
+                  }`}
+                >
+                  <Badge className={`${m.color} text-[10px] mb-1.5`} variant="secondary">{m.label}</Badge>
+                  <p className="text-xs text-muted-foreground leading-tight">{m.descripcion}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Banner análisis disponibles */}
       {analisis.length > 0 && (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
           <Brain className="w-4 h-4 text-primary shrink-0" />
           <p className="text-xs text-primary">
             Se incorporarán automáticamente <strong>{analisis.length} análisis</strong> de los Agentes IA al generar el escrito.
@@ -518,13 +181,9 @@ export default function ModelosEscritos({ caso, documentos }) {
               onChange={e => setInstrucciones(e.target.value)}
             />
           </div>
-          <Button
-            onClick={generarEscrito}
-            disabled={loading}
-            className="gap-2"
-          >
+          <Button onClick={generarEscrito} disabled={loading} className="gap-2">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {loading ? "Generando escrito..." : `Generar ${modelos.find(m => m.id === modeloSeleccionado)?.label}`}
+            {loading ? "Generando escrito..." : `Generar ${modeloActual?.label}`}
           </Button>
         </div>
       )}
@@ -536,9 +195,7 @@ export default function ModelosEscritos({ caso, documentos }) {
             <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">
-                  {modelos.find(m => m.id === modeloSeleccionado)?.label}
-                </span>
+                <span className="text-sm font-semibold">{modeloActual?.label}</span>
                 <Badge className="bg-green-100 text-green-700 text-[10px]" variant="secondary">Generado</Badge>
               </div>
               <div className="flex items-center gap-2">
