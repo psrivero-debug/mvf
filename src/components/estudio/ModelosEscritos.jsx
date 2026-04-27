@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, Printer, Copy, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Loader2, FileText, Printer, Copy, ChevronDown, ChevronUp, Sparkles, Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 const MARCO_NORMATIVO = `
@@ -226,6 +226,15 @@ Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
   },
 ];
 
+const AGENTE_LABELS = {
+  lector_juridico: "Lector Jurídico",
+  abogado_defensor: "Abogado Defensor",
+  analista: "Justua (Analista)",
+  transcriptor: "Transcriptor / Redactor",
+  cronologista: "Cronologista",
+  extractor_keywords: "Extractor de Keywords",
+};
+
 export default function ModelosEscritos({ caso, documentos }) {
   const [modeloSeleccionado, setModeloSeleccionado] = useState(null);
   const [instrucciones, setInstrucciones] = useState("");
@@ -234,19 +243,44 @@ export default function ModelosEscritos({ caso, documentos }) {
   const [expandido, setExpandido] = useState(true);
   const [copiado, setCopiado] = useState(false);
 
+  const { data: analisis = [] } = useQuery({
+    queryKey: ["caso_analisis", caso.id],
+    queryFn: () => base44.entities.CasoAnalisis.filter({ caso_id: caso.id }, "-created_date"),
+  });
+
   const generarEscrito = async () => {
     if (!modeloSeleccionado) return;
     setLoading(true);
     setResultado(null);
 
-    // Enriquecer con documentos si hay
+    // Resolver textos de análisis (pueden ser URLs)
+    const analisisConTexto = await Promise.all(
+      analisis.map(async (a) => {
+        let texto = a.respuesta || "";
+        if (texto.startsWith("http://") || texto.startsWith("https://")) {
+          try { texto = await fetch(texto).then(r => r.text()); } catch {}
+        }
+        return { ...a, textoResuelto: texto };
+      })
+    );
+
+    // Construir bloque de análisis previos
+    const analisisTexto = analisisConTexto.length > 0
+      ? "\n\n=== ANÁLISIS PREVIOS REALIZADOS POR AGENTES IA ===\n" +
+        analisisConTexto.map(a =>
+          `[${AGENTE_LABELS[a.agente] || a.agente}] Consulta: ${a.consulta}\n${a.textoResuelto.slice(0, 1500)}`
+        ).join("\n\n---\n\n") +
+        "\n=== FIN DE ANÁLISIS ==="
+      : "";
+
+    // Enriquecer con documentos
     const docsTexto = documentos.length > 0
       ? "\n\nDOCUMENTOS DEL CASO DISPONIBLES:\n" +
-        documentos.map(d => `- ${d.titulo}${d.contenido_texto ? `: ${d.contenido_texto.slice(0, 500)}...` : ""}`).join("\n")
+        documentos.map(d => `- ${d.titulo}${d.contenido_texto ? `: ${d.contenido_texto.slice(0, 400)}...` : ""}`).join("\n")
       : "";
 
     const modelo = modelos.find(m => m.id === modeloSeleccionado);
-    const prompt = modelo.prompt(caso, instrucciones) + docsTexto;
+    const prompt = modelo.prompt(caso, instrucciones) + analisisTexto + docsTexto;
 
     const respuesta = await base44.integrations.Core.InvokeLLM({
       prompt,
@@ -333,6 +367,16 @@ export default function ModelosEscritos({ caso, documentos }) {
           ))}
         </div>
       </div>
+
+      {/* Banner análisis disponibles */}
+      {analisis.length > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+          <Brain className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-xs text-primary">
+            Se incorporarán automáticamente <strong>{analisis.length} análisis</strong> de los Agentes IA al generar el escrito.
+          </p>
+        </div>
+      )}
 
       {/* Instrucciones adicionales */}
       {modeloSeleccionado && (
