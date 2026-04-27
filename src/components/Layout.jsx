@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Users, Briefcase, FileText, 
-  MessageSquare, Scale, Menu, X, Shield, Calculator, ClipboardList, CheckCircle2, BookMarked, Receipt
+  MessageSquare, Scale, Menu, X, Shield, Calculator, ClipboardList, CheckCircle2, BookMarked, Receipt, FilePlus
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const navItems = [
   { path: "/estudio-caso", label: "Estudio de Caso", icon: BookMarked },
   { path: "/redaccion", label: "Redacción IA", icon: MessageSquare },
   { path: "/consultas", label: "Consultas", icon: ClipboardList },
+  { path: "/presupuestos", label: "Presupuestos", icon: FilePlus },
   { path: "/recibos", label: "Recibos", icon: Receipt },
   { path: "/consulta", label: "Consulta Legal", icon: Scale },
 ];

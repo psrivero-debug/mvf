@@ -19,6 +19,7 @@ import Consultas from './pages/Consultas';
 import Requisitos from './pages/Requisitos';
 import EstudioCaso from './pages/EstudioCaso';
 import Recibos from './pages/Recibos';
+import Presupuestos from './pages/Presupuestos';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
         <Route path="/requisitos" element={<Requisitos />} />
         <Route path="/estudio-caso" element={<EstudioCaso />} />
         <Route path="/recibos" element={<Recibos />} />
+        <Route path="/presupuestos" element={<Presupuestos />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />

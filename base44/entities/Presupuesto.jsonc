@@ -14,10 +14,6 @@
       "type": "string",
       "description": "Nombre del cliente"
     },
-    "consulta_id": {
-      "type": "string",
-      "description": "ID de la consulta asociada"
-    },
     "fecha_emision": {
       "type": "string",
       "format": "date",
@@ -26,31 +22,42 @@
     "fecha_vencimiento": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de vencimiento (10 d\u00edas)"
+      "description": "Fecha de vencimiento (15 d\u00edas)"
     },
-    "concepto": {
+    "conceptos_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de aranceles IUS seleccionados"
+    },
+    "conceptos_nombres": {
       "type": "string",
-      "description": "Descripci\u00f3n del servicio/concepto"
+      "description": "Nombres de conceptos seleccionados (texto)"
     },
-    "monto_lista": {
+    "monto_base": {
       "type": "number",
-      "description": "Monto de lista (sin descuento)"
+      "description": "Monto base del arancel (sin IVA)"
+    },
+    "monto_efectivo_desc": {
+      "type": "number",
+      "description": "Monto efectivo con 10% de descuento"
     },
     "monto_contado": {
       "type": "number",
-      "description": "Monto contado con 15% descuento"
-    },
-    "cuotas_3": {
-      "type": "number",
-      "description": "Valor de cuota a 3 meses"
+      "description": "Monto contado 1 pago"
     },
     "cuotas_6": {
       "type": "number",
-      "description": "Valor de cuota a 6 meses"
+      "description": "Valor cuota a 6 meses"
     },
-    "html_content": {
+    "cuotas_12": {
+      "type": "number",
+      "description": "Valor cuota a 12 meses (+10%)"
+    },
+    "notas": {
       "type": "string",
-      "description": "Contenido HTML del presupuesto"
+      "description": "Observaciones adicionales"
     },
     "estado": {
       "type": "string",
@@ -63,7 +70,6 @@
     }
   },
   "required": [
-    "client_id",
     "client_name",
     "fecha_emision"
   ]
