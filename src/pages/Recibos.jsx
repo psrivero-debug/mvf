@@ -166,13 +166,27 @@ export default function Recibos() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recibos"] }),
   });
 
-  const handleClientChange = (clientId) => {
-    const client = clients.find(c => c.id === clientId);
-    setForm(prev => ({ ...prev, client_id: clientId, client_name: client?.full_name || "" }));
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+
+  const filteredClients = clients.filter(c =>
+    c.full_name?.toLowerCase().includes(clientSearch.toLowerCase())
+  );
+
+  const handleClientInput = (value) => {
+    setClientSearch(value);
+    setForm(prev => ({ ...prev, client_name: value, client_id: "" }));
+    setShowClientDropdown(true);
+  };
+
+  const handleClientSelect = (client) => {
+    setClientSearch(client.full_name);
+    setForm(prev => ({ ...prev, client_id: client.id, client_name: client.full_name }));
+    setShowClientDropdown(false);
   };
 
   const handleSubmit = () => {
-    const data = { ...form, monto: parseFloat(form.monto) || 0 };
+    const data = { ...form, client_name: clientSearch || form.client_name, monto: parseFloat(form.monto) || 0 };
     createMutation.mutate(data);
   };
 
@@ -320,21 +334,34 @@ export default function Recibos() {
             </div>
             <div className="grid gap-2">
               <Label>Cliente *</Label>
-              <Select value={form.client_id} onValueChange={handleClientChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar cliente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Escribir o buscar cliente..."
+                  value={clientSearch}
+                  onChange={e => handleClientInput(e.target.value)}
+                  onFocus={() => setShowClientDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowClientDropdown(false), 150)}
+                  className="pl-9"
+                />
+                {showClientDropdown && filteredClients.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredClients.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                        onMouseDown={() => handleClientSelect(c)}
+                      >
                         {c.full_name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {form.client_id && (
+                <p className="text-xs text-green-600">✓ Cliente existente vinculado</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>Concepto *</Label>
@@ -394,7 +421,7 @@ export default function Recibos() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!form.client_id || !form.concepto || !form.monto || createMutation.isPending}
+              disabled={!clientSearch || !form.concepto || !form.monto || createMutation.isPending}
               className="gap-2"
             >
               <Printer className="w-4 h-4" />
