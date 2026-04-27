@@ -18,6 +18,7 @@ import LegalConsultant from './pages/LegalConsultant';
 import Consultas from './pages/Consultas';
 import Requisitos from './pages/Requisitos';
 import EstudioCaso from './pages/EstudioCaso';
+import Recibos from './pages/Recibos';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -51,6 +52,7 @@ const AuthenticatedApp = () => {
         <Route path="/consultas" element={<Consultas />} />
         <Route path="/requisitos" element={<Requisitos />} />
         <Route path="/estudio-caso" element={<EstudioCaso />} />
+        <Route path="/recibos" element={<Recibos />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />

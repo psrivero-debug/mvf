@@ -1,0 +1,53 @@
+{
+  "name": "Recibo",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string",
+      "description": "N\u00famero de recibo"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de emisi\u00f3n"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente"
+    },
+    "concepto": {
+      "type": "string",
+      "description": "Concepto del pago recibido"
+    },
+    "monto": {
+      "type": "number",
+      "description": "Monto recibido en pesos"
+    },
+    "forma_pago": {
+      "type": "string",
+      "enum": [
+        "efectivo",
+        "transferencia",
+        "cheque",
+        "otro"
+      ],
+      "default": "efectivo",
+      "description": "Forma de pago"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Observaciones adicionales"
+    }
+  },
+  "required": [
+    "client_id",
+    "client_name",
+    "concepto",
+    "monto",
+    "fecha"
+  ]
+}
