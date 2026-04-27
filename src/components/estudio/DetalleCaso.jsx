@@ -2,16 +2,18 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Bot, BookOpen, List } from "lucide-react";
+import { ArrowLeft, FileText, Bot, BookOpen, List, PenLine } from "lucide-react";
 import DocumentosList from "./DocumentosList";
 import AgenteIA from "./AgenteIA";
 import ExportarCaso from "./ExportarCaso";
 import IndiceCaso from "./IndiceCaso";
+import ModelosEscritos from "./ModelosEscritos";
 
 const tabs = [
   { id: "indice", label: "Índice", icon: List },
   { id: "documentos", label: "Documentos", icon: FileText },
   { id: "agentes", label: "Agentes IA", icon: Bot },
+  { id: "escritos", label: "Modelos de Escritos", icon: PenLine },
 ];
 
 export default function DetalleCaso({ caso, onBack }) {
@@ -82,6 +84,7 @@ export default function DetalleCaso({ caso, onBack }) {
       {activeTab === "indice" && <IndiceCaso documentos={documentos} />}
       {activeTab === "documentos" && <DocumentosList caso={caso} documentos={documentos} />}
       {activeTab === "agentes" && <AgenteIA caso={caso} documentos={documentos} />}
+      {activeTab === "escritos" && <ModelosEscritos caso={caso} documentos={documentos} />}
     </div>
   );
 }
