@@ -196,6 +196,131 @@ ESTRUCTURA REQUERIDA:
 Usá tono formal, directo y fehaciente. Completá con [COMPLETAR] los datos faltantes.`,
   },
   {
+    id: "proceso_ordinario",
+    label: "Proceso Ordinario",
+    color: "bg-indigo-100 text-indigo-700",
+    descripcion: "Demanda en proceso de conocimiento ordinario",
+    prompt: (caso, extra) => `Redactá una DEMANDA en PROCESO ORDINARIO completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004).
+
+${MARCO_NORMATIVO}
+
+DATOS DEL CASO:
+- Carátula: ${caso.titulo}
+- Cliente/Actor: ${caso.client_name || "—"}
+- Tipo de caso: ${caso.tipo_caso || "—"}
+- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
+- Partes: ${caso.partes || "—"}
+- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
+${extra ? `\nInstrucciones adicionales: ${extra}` : ""}
+
+El proceso ordinario es el de mayor amplitud probatoria y plazos más extensos (contestación 15 días hábiles). Usarlo cuando la complejidad o el monto del caso así lo justifique.
+
+ESTRUCTURA REQUERIDA:
+1. Encabezado (juzgado, autos, carátula — PROCESO ORDINARIO)
+2. I. OBJETO
+3. II. HECHOS (numerados y detallados)
+4. III. DERECHO
+5. IV. PRUEBA (amplia: documental, testimonial, pericial, informativa, reconocimiento judicial)
+6. V. PETITORIO
+7. Firma
+
+Usá lenguaje forense formal. Completá con [COMPLETAR: descripción] los campos que requieran datos específicos.`,
+  },
+  {
+    id: "proceso_ejecutivo",
+    label: "Proceso Ejecutivo",
+    color: "bg-cyan-100 text-cyan-700",
+    descripcion: "Demanda ejecutiva por título ejecutivo (cheque, pagaré, etc.)",
+    prompt: (caso, extra) => `Redactá una DEMANDA EJECUTIVA completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004), arts. 520 y ss.
+
+${MARCO_NORMATIVO}
+
+DATOS DEL CASO:
+- Carátula: ${caso.titulo}
+- Ejecutante/Cliente: ${caso.client_name || "—"}
+- Ejecutado: ${caso.partes || "[COMPLETAR: ejecutado]"}
+- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
+- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
+${extra ? `\nTítulo ejecutivo y monto: ${extra}` : ""}
+
+El proceso ejecutivo procede cuando existe un título ejecutivo (cheque, pagaré, sentencia, escritura, etc.) que trae aparejada ejecución.
+
+ESTRUCTURA REQUERIDA:
+1. Encabezado (PROCESO EJECUTIVO)
+2. I. OBJETO (cobro ejecutivo del título)
+3. II. TÍTULO EJECUTIVO (descripción, monto, vencimiento)
+4. III. HECHOS (mora, incumplimiento)
+5. IV. DERECHO (arts. 520 y ss. CPCC San Luis, normativa del título)
+6. V. MEDIDA CAUTELAR (embargo preventivo sobre bienes del ejecutado)
+7. VI. PETITORIO (librar mandamiento de intimación de pago y embargo)
+8. Firma
+
+Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "proceso_sumario",
+    label: "Proceso Sumario",
+    color: "bg-amber-100 text-amber-700",
+    descripcion: "Demanda en proceso sumario (plazos y prueba reducidos)",
+    prompt: (caso, extra) => `Redactá una DEMANDA en PROCESO SUMARIO completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004).
+
+${MARCO_NORMATIVO}
+
+DATOS DEL CASO:
+- Carátula: ${caso.titulo}
+- Cliente/Actor: ${caso.client_name || "—"}
+- Tipo de caso: ${caso.tipo_caso || "—"}
+- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
+- Partes: ${caso.partes || "—"}
+- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
+${extra ? `\nInstrucciones adicionales: ${extra}` : ""}
+
+El proceso sumario tiene plazos y etapas probatorias más reducidas que el ordinario. Se usa para causas de mediana complejidad o monto determinado por ley.
+
+ESTRUCTURA REQUERIDA:
+1. Encabezado (PROCESO SUMARIO)
+2. I. OBJETO
+3. II. HECHOS (numerados, concisos)
+4. III. DERECHO
+5. IV. PRUEBA (documental y testimonial principalmente)
+6. V. PETITORIO
+7. Firma
+
+Usá lenguaje forense formal. Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "proceso_sumarisimo",
+    label: "Proceso Sumarísimo",
+    color: "bg-rose-100 text-rose-700",
+    descripcion: "Demanda en proceso sumarísimo (urgente, plazos mínimos)",
+    prompt: (caso, extra) => `Redactá una DEMANDA en PROCESO SUMARÍSIMO completa y formal para la Justicia de la Provincia de San Luis, conforme al CPCC San Luis (Ley I-0002-2004).
+
+${MARCO_NORMATIVO}
+
+DATOS DEL CASO:
+- Carátula: ${caso.titulo}
+- Cliente/Actor: ${caso.client_name || "—"}
+- Tipo de caso: ${caso.tipo_caso || "—"}
+- Jurisdicción: ${caso.jurisdiccion || "Juzgado competente de San Luis"}
+- Partes: ${caso.partes || "—"}
+- Hechos: ${caso.hechos_resumen || caso.descripcion || "—"}
+${extra ? `\nMotivo de urgencia y reclamo: ${extra}` : ""}
+
+El proceso sumarísimo es el más ágil (contestación 5 días hábiles). Se usa para causas urgentes: desalojo, amparo, alimentos provisorios, medidas urgentes de familia.
+
+ESTRUCTURA REQUERIDA:
+1. Encabezado (PROCESO SUMARÍSIMO — indicar urgencia)
+2. I. OBJETO (con énfasis en la urgencia)
+3. II. HECHOS (breve y concreto)
+4. III. URGENCIA Y VEROSIMILITUD DEL DERECHO
+5. IV. DERECHO
+6. V. PRUEBA (reducida)
+7. VI. PETITORIO (con solicitud de resolución urgente)
+8. Firma
+
+Usá lenguaje forense formal y destacá la urgencia. Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
     id: "escrito_laboral",
     label: "Demanda Laboral",
     color: "bg-teal-100 text-teal-700",
