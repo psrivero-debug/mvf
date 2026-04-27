@@ -10,6 +10,53 @@ import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, 
 import ReactMarkdown from "react-markdown";
 import Anotaciones from "./Anotaciones";
 
+const MARCO_NORMATIVO_SAN_LUIS = `
+=== MARCO NORMATIVO APLICABLE (PROVINCIA DE SAN LUIS) ===
+
+**CÓDIGO DE FAMILIA DE LA PROVINCIA DE SAN LUIS (Ley I-0007-2004 y modificatorias)**
+- Regula relaciones de familia: matrimonio, filiación, adopción, patria potestad, alimentos, régimen comunicacional, violencia familiar.
+- Art. 1 y ss: Principios de protección integral de la familia.
+- Violencia familiar: Ley I-0016-2004 (Prov. San Luis) — medidas cautelares, restricciones perimetrales, exclusión del hogar.
+- Régimen comunicacional (visitas): debe ser acordado judicialmente, puede suspenderse por riesgo acreditado para el menor.
+- Interés superior del niño: principio rector en toda decisión que involucre menores (art. 3 CDN, art. 706 CCCN).
+
+**CÓDIGO PROCESAL CIVIL Y COMERCIAL DE LA PROVINCIA DE SAN LUIS (Ley I-0002-2004 y modificatorias)**
+- Regula el proceso civil y comercial provincial.
+- Medidas cautelares: art. 230 y ss — verosimilitud del derecho, peligro en la demora, contracautela.
+- Proceso de familia: fuero especializado, principios de oralidad, inmediación y concentración.
+- Plazos procesales: contestación de demanda 15 días hábiles en proceso ordinario; 5 días en sumarísimo.
+- Nulidades procesales: arts. 169 y ss — principio de trascendencia, convalidación.
+- Sentencias definitivas: apelables ante Cámara de Apelaciones de San Luis.
+
+**CÓDIGO PROCESAL PENAL DE LA PROVINCIA DE SAN LUIS (Ley II-0009-2005 y modificatorias)**
+- Sistema acusatorio adversarial.
+- Art. 54: Calidad de Víctima. Art. 55: Derechos de la Víctima.
+- Art. 101-105: Denuncia — obligación, prohibición, participación, responsabilidad, protección de identidad.
+- Fiscalía de Género: competencia en delitos con perspectiva de género (violencia doméstica, abuso, etc.).
+- Medidas de protección: restricción de acercamiento, prohibición de contacto, exclusión del hogar — pueden dictarse inaudita parte.
+- Plazos de investigación penal preparatoria: 6 meses prorrogables.
+
+**CÓDIGO PROCESAL LABORAL DE LA PROVINCIA DE SAN LUIS (Ley I-0783-2004 y modificatorias)**
+- Regula el proceso laboral provincial ante la Cámara del Trabajo de San Luis.
+- Principios: gratuidad, celeridad, oralidad, inmediación, concentración, in dubio pro operario.
+- Demanda laboral: presentación escrita, contestación en 10 días hábiles.
+- Medidas cautelares laborales: embargo preventivo, inhibición general de bienes.
+- Prescripción laboral: 2 años desde extinción del vínculo (art. 256 LCT).
+- Prueba: se admiten todos los medios; la falta de registración laboral genera presunción favorable al trabajador.
+
+**LEY DE CONTRATO DE TRABAJO (Ley 20.744 y modificatorias — aplicación nacional)**
+- Rige las relaciones laborales privadas en todo el territorio argentino.
+- Art. 14 bis CN: protección del trabajo, estabilidad, indemnización.
+- Indemnización por despido sin causa: art. 245 LCT — 1 mes de sueldo por año de antigüedad.
+- Preaviso: art. 231-232 LCT — según antigüedad (15 días a 2 meses).
+- Trabajo no registrado: art. 7-11 Ley 24.013 — multas agravadas; presunción de relación laboral art. 23 LCT.
+- Licencias: art. 150 y ss — vacaciones; art. 208 — enfermedad; art. 177 — maternidad (90 días).
+- Jornada máxima: Ley 11.544 — 8 hs diarias / 48 hs semanales; horas extras con recargo del 50% o 100%.
+- Mobbing/acoso laboral: aplicación art. 62, 63, 78 LCT (deberes de conducta); puede fundar despido indirecto.
+
+=== FIN MARCO NORMATIVO ===
+`;
+
 const agentes = [
   {
     id: "lector_juridico",
@@ -22,6 +69,8 @@ const agentes = [
     prompt: (consulta, docsTexto) => `Sos un experto en derecho argentino, especializado en la Provincia de San Luis.
 Analizá los siguientes documentos judiciales y respondé la consulta con precisión jurídica.
 Usá lenguaje técnico-jurídico apropiado.
+
+${MARCO_NORMATIVO_SAN_LUIS}
 
 SISTEMA DE CITAS OBLIGATORIO:
 - Cada vez que hagas una afirmación basada en un documento, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
@@ -50,6 +99,8 @@ Analizá los documentos del caso y respondé desde la perspectiva del defensor.
 Citá jurisprudencia de la Provincia de San Luis, Corte Suprema Argentina y legislación vigente.
 Identificá posibles errores procesales, nulidades, o circunstancias atenuantes.
 
+${MARCO_NORMATIVO_SAN_LUIS}
+
 SISTEMA DE CITAS OBLIGATORIO:
 - Cada vez que hagas una afirmación basada en un documento, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
 - Al final de tu respuesta, incluí una sección titulada "**Referencias:**" con la lista numerada de cada cita en el formato:
@@ -73,6 +124,8 @@ Respondé con estrategia defensiva detallada, usando superíndices en cada afirm
     keywords: ["probabilidad", "chance", "posibilidad", "objetivo", "imparcial", "fortaleza", "debilidad", "resultado", "ganamos", "perdem", "calcul", "análisis", "perspectiva"],
     prompt: (consulta, docsTexto, escalaFavor) => `Sos Justua, un agente jurídico experto en derecho argentino, Provincia de San Luis.
 Tu tarea es analizar el caso de forma objetiva e imparcial, evaluando fortalezas y debilidades de cada parte.
+
+${MARCO_NORMATIVO_SAN_LUIS}
 
 DATOS DEL CASO PROPORCIONADOS:
 - Balance actual: ${escalaFavor > 0 ? `Favorable al Demandado (+${escalaFavor})` : escalaFavor < 0 ? `Favorable al Demandante (${escalaFavor})` : 'Neutro (0)'}
@@ -113,6 +166,8 @@ Tu tarea es redactar, resumir o reorganizar información jurídica de manera cla
 Usá el formato correcto para escritos judiciales argentinos cuando corresponda.
 Respetá la legislación vigente y el estilo forense de la Provincia de San Luis.
 
+${MARCO_NORMATIVO_SAN_LUIS}
+
 SISTEMA DE CITAS OBLIGATORIO:
 - Cada vez que uses información de un documento del caso, colocá un número superíndice al final de la frase: ¹ ² ³ ⁴ ⁵ etc.
 - Al final de tu respuesta, incluí una sección titulada "**Referencias:**" con la lista numerada de cada cita en el formato:
@@ -135,6 +190,8 @@ Respondé con el texto redactado o resumen solicitado, usando superíndices y re
     keywords: ["cronolog", "línea de tiempo", "timeline", "orden", "fechas", "secuencia", "cuando", "cuándo", "histor"],
     prompt: (consulta, docsTexto) => `Sos un experto en análisis cronológico de causas judiciales argentinas, Provincia de San Luis.
 Tu tarea es construir una línea de tiempo precisa y ordenada de todos los hechos, actos procesales y eventos relevantes del caso.
+
+${MARCO_NORMATIVO_SAN_LUIS}
 
 INSTRUCCIONES:
 - Extraé TODAS las fechas mencionadas en los documentos (fechas de hechos, presentaciones, notificaciones, sentencias, plazos, etc.)
@@ -167,6 +224,8 @@ Presentá la línea de tiempo en formato claro, ordenada cronológicamente, con 
     keywords: ["keyword", "palabra", "clave", "persona", "monto", "dato", "nombre", "actor", "demandado", "partes", "número", "importe"],
     prompt: (consulta, docsTexto) => `Sos un analista forense especializado en extracción de información de documentos jurídicos argentinos, Provincia de San Luis.
 Tu tarea es identificar y extraer sistemáticamente toda la información estructurada relevante del caso.
+
+${MARCO_NORMATIVO_SAN_LUIS}
 
 EXTRAE Y ORGANIZA EN SECCIONES:
 
