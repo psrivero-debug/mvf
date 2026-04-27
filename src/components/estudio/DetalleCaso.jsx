@@ -8,6 +8,7 @@ import AgenteIA from "./AgenteIA";
 import ExportarCaso from "./ExportarCaso";
 import IndiceCaso from "./IndiceCaso";
 import ModelosEscritos from "./ModelosEscritos";
+import PuntosCaso from "./PuntosCaso";
 
 const tabs = [
   { id: "indice", label: "Índice", icon: List },
@@ -61,6 +62,9 @@ export default function DetalleCaso({ caso, onBack }) {
           <p>{caso.descripcion}</p>
         </div>
       )}
+
+      {/* Puntos fuertes y débiles */}
+      <PuntosCaso caso={caso} documentos={documentos} analisis={analisis} />
 
       {/* Tabs */}
       <div className="flex border-b gap-1">
