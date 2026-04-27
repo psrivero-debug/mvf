@@ -496,6 +496,85 @@ export default function AgenteIA({ caso, documentos }) {
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-5">
 
+        {/* RESUMEN INTEGRAL */}
+        <div className="rounded-xl border-2 border-accent/40 bg-accent/5 p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-accent" /> Resumen de lo trabajado</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Genera un resumen integral de todos los documentos y análisis del caso</p>
+          </div>
+          <Button
+            disabled={isPending}
+            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+            onClick={async () => {
+              // Resolver todos los documentos
+              const docsConTexto = await Promise.all(
+                documentos.map(async d => ({
+                  ...d,
+                  contenido_resuelto: await resolverContenido(d),
+                }))
+              );
+              const docsTexto = docsConTexto.length > 0
+                ? docsConTexto.map(d => `--- DOCUMENTO: "${d.titulo}" (Fuente: ${d.fuente || "No especificada"}, Fecha: ${d.fecha_documento || "No especificada"}) ---\n${d.contenido_resuelto}`).join("\n\n")
+                : "(Sin documentos)";
+
+              // Resolver todos los análisis previos
+              const analisisConTexto = await Promise.all(
+                analisis.map(async a => {
+                  let texto = a.respuesta || "";
+                  if (texto.startsWith("http://") || texto.startsWith("https://")) {
+                    try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                  }
+                  const ag = agentes.find(ag => ag.id === a.agente);
+                  return `[${ag?.label || a.agente}] ${a.consulta}:\n${texto}`;
+                })
+              );
+              const analisisTexto = analisisConTexto.length > 0
+                ? analisisConTexto.join("\n\n---\n\n")
+                : "(Sin análisis previos)";
+
+              const consultaResumen = `Generá un RESUMEN INTEGRAL Y EJECUTIVO de todo lo trabajado en este caso. 
+Integrá la información de los documentos del caso y de todos los análisis realizados previamente.
+El resumen debe incluir:
+1. **Síntesis del caso** (partes, hechos principales, estado procesal)
+2. **Lo más relevante de cada análisis realizado** (con el agente que lo hizo)
+3. **Conclusiones y estado actual** del caso
+4. **Próximos pasos recomendados**
+
+ANÁLISIS PREVIOS REALIZADOS:
+${analisisTexto}`;
+
+              setIsPending(true);
+              setConsultandoIdx("lector_juridico");
+              const agenteConfig = agentes.find(a => a.id === "lector_juridico");
+              let respuesta = await base44.integrations.Core.InvokeLLM({
+                prompt: agenteConfig.prompt(consultaResumen, docsTexto),
+                model: "claude_sonnet_4_6",
+              });
+              if (respuesta && respuesta.length > 8000) {
+                const blob = new Blob([respuesta], { type: "text/plain" });
+                const txtFile = new File([blob], `resumen_${Date.now()}.txt`, { type: "text/plain" });
+                const { file_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+                respuesta = file_url;
+              }
+              await base44.entities.CasoAnalisis.create({
+                caso_id: caso.id,
+                agente: "lector_juridico",
+                consulta: "📋 Resumen integral de lo trabajado",
+                respuesta,
+                documentos_referenciados: [],
+              });
+              queryClient.invalidateQueries({ queryKey: ["caso_analisis", caso.id] });
+              setConsultandoIdx(null);
+              setIsPending(false);
+            }}
+          >
+            {isPending && consultandoIdx === "lector_juridico" && consulta === ""
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Generando...</>
+              : <><FileText className="w-4 h-4" /> Generar resumen</>
+            }
+          </Button>
+        </div>
+
         {/* ACCIONES RÁPIDAS */}
         <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
           <div className="flex items-center gap-2">
