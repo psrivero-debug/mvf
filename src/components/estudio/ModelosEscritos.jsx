@@ -24,6 +24,10 @@ export default function ModelosEscritos({ caso, documentos }) {
   const [loading, setLoading] = useState(false);
   const [expandido, setExpandido] = useState(true);
   const [copiado, setCopiado] = useState(false);
+  const [gruposAbiertos, setGruposAbiertos] = useState({ "Judiciales Provinciales": true });
+
+  const toggleGrupo = (label) =>
+    setGruposAbiertos(prev => ({ ...prev, [label]: !prev[label] }));
 
   const { data: analisis = [] } = useQuery({
     queryKey: ["caso_analisis", caso.id],
@@ -126,34 +130,50 @@ export default function ModelosEscritos({ caso, documentos }) {
 
   return (
     <div className="space-y-6">
-      {/* Selector agrupado */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      {/* Selector agrupado con accordion */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
           Seleccioná el tipo de escrito
         </h3>
-        {GRUPOS_MODELOS.map((grupo) => (
-          <div key={grupo.label}>
-            <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-2 border-b pb-1">
-              {grupo.label}
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {grupo.modelos.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => { setModeloSeleccionado(m.id); setResultado(null); }}
-                  className={`p-3 rounded-xl border-2 text-left transition-all ${
-                    modeloSeleccionado === m.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/40 bg-background"
-                  }`}
-                >
-                  <Badge className={`${m.color} text-[10px] mb-1.5`} variant="secondary">{m.label}</Badge>
-                  <p className="text-xs text-muted-foreground leading-tight">{m.descripcion}</p>
-                </button>
-              ))}
+        {GRUPOS_MODELOS.map((grupo) => {
+          const abierto = !!gruposAbiertos[grupo.label];
+          const tieneSeleccion = grupo.modelos.some(m => m.id === modeloSeleccionado);
+          return (
+            <div key={grupo.label} className={`border rounded-xl overflow-hidden transition-all ${tieneSeleccion ? "border-primary/50" : "border-border"}`}>
+              <button
+                onClick={() => toggleGrupo(grupo.label)}
+                className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${abierto ? "bg-muted/50" : "bg-background hover:bg-muted/30"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">{grupo.label}</span>
+                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{grupo.modelos.length}</span>
+                  {tieneSeleccion && <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">seleccionado</span>}
+                </div>
+                {abierto ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {abierto && (
+                <div className="p-3 border-t bg-background">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {grupo.modelos.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => { setModeloSeleccionado(m.id); setResultado(null); }}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${
+                          modeloSeleccionado === m.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40 bg-background"
+                        }`}
+                      >
+                        <Badge className={`${m.color} text-[10px] mb-1.5`} variant="secondary">{m.label}</Badge>
+                        <p className="text-xs text-muted-foreground leading-tight">{m.descripcion}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Banner análisis disponibles */}
