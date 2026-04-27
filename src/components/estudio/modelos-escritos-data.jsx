@@ -348,6 +348,134 @@ Completá con [COMPLETAR] los datos faltantes.`,
 ];
 
 // ─────────────────────────────────────────────
+// GRUPO: DERECHO DE FAMILIA
+// ─────────────────────────────────────────────
+const familia = [
+  {
+    id: "divorcio_unilateral",
+    label: "Divorcio Unilateral",
+    grupo: "Derecho de Familia",
+    color: "bg-pink-100 text-pink-800",
+    descripcion: "Divorcio incausado unilateral (art. 437 CCCN)",
+    prompt: (caso, extra) => `Redactá una PETICIÓN DE DIVORCIO UNILATERAL ante la Justicia de Familia de San Luis (art. 437 y ss. CCCN, Código de Familia San Luis Ley I-0007-2004).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nConvenio regulador, hijos, bienes: ${extra}` : ""}
+
+El divorcio es incausado: no se requiere invocar culpa ni causales. Puede solicitarlo cualquiera de los cónyuges unilateralmente.
+ESTRUCTURA: 1.Encabezado (Juzgado de Familia) 2.I.OBJETO (divorcio vincular) 3.II.DATOS DEL MATRIMONIO (fecha, lugar, acta) 4.III.HIJOS MENORES (si los hubiere, con datos) 5.IV.CONVENIO REGULADOR PROPUESTO (alimentos, cuidado personal, comunicacional, vivienda, bienes) 6.V.DERECHO (arts. 437-438 CCCN) 7.VI.PETITORIO (sentencia de divorcio, inscripción en Registro Civil) 8.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "divorcio_bilateral",
+    label: "Divorcio por Presentación Conjunta",
+    grupo: "Derecho de Familia",
+    color: "bg-pink-200 text-pink-900",
+    descripcion: "Divorcio de mutuo acuerdo con convenio regulador (art. 438 CCCN)",
+    prompt: (caso, extra) => `Redactá una PETICIÓN DE DIVORCIO POR PRESENTACIÓN CONJUNTA (bilateral/consensual) ante la Justicia de Familia de San Luis (art. 438 CCCN).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nConvenio regulador acordado, hijos, bienes: ${extra}` : ""}
+
+Ambos cónyuges se presentan de común acuerdo con un convenio regulador completo.
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO 3.II.DATOS DEL MATRIMONIO 4.III.HIJOS (cuidado personal, comunicacional, alimentos) 5.IV.CONVENIO REGULADOR COMPLETO (vivienda, bienes, alimentos entre cónyuges si corresponde) 6.V.DERECHO (art. 438 CCCN) 7.VI.PETITORIO 8.Firma de ambos cónyuges y letrado/a
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "alimentos",
+    label: "Demanda de Alimentos",
+    grupo: "Derecho de Familia",
+    color: "bg-rose-100 text-rose-800",
+    descripcion: "Demanda de alimentos para hijos menores o cónyuge",
+    prompt: (caso, extra) => `Redactá una DEMANDA DE ALIMENTOS ante la Justicia de Familia de San Luis (arts. 537 y ss. CCCN, Código de Familia San Luis).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nAlimentado, alimentante, ingresos y necesidades: ${extra}` : ""}
+
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO (cuota alimentaria) 3.II.LEGITIMACIÓN ACTIVA (vínculo alimentario) 4.III.NECESIDADES DEL ALIMENTADO (educación, salud, vestimenta, recreación) 5.IV.POSIBILIDADES ECONÓMICAS DEL ALIMENTANTE (ingresos, bienes, actividad laboral) 6.V.CUOTA PROPUESTA (monto o porcentaje) 7.VI.MEDIDA CAUTELAR (alimentos provisorios urgentes) 8.VII.DERECHO (arts. 537-554 CCCN) 9.VIII.PRUEBA 10.IX.PETITORIO 11.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "regimen_comunicacional",
+    label: "Régimen Comunicacional",
+    grupo: "Derecho de Familia",
+    color: "bg-fuchsia-100 text-fuchsia-800",
+    descripcion: "Régimen de visitas / comunicacional con hijos menores",
+    prompt: (caso, extra) => `Redactá una DEMANDA DE RÉGIMEN COMUNICACIONAL (visitas) ante la Justicia de Familia de San Luis (arts. 651 y ss. CCCN).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nRégimen propuesto, hijos, situación actual: ${extra}` : ""}
+
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO (establecimiento/modificación del régimen comunicacional) 3.II.DATOS DE LOS NIÑOS (nombre, edad) 4.III.SITUACIÓN ACTUAL (con quién conviven, relación con el progenitor no conviviente) 5.IV.RÉGIMEN PROPUESTO (días, horarios, vacaciones, feriados) 6.V.INTERÉS SUPERIOR DEL NIÑO (art. 3 CDN, art. 706 CCCN) 7.VI.DERECHO (arts. 651-657 CCCN) 8.VII.PRUEBA 9.VIII.PETITORIO 10.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "adopcion",
+    label: "Adopción",
+    grupo: "Derecho de Familia",
+    color: "bg-violet-100 text-violet-800",
+    descripcion: "Petición de adopción plena, simple o de integración",
+    prompt: (caso, extra) => `Redactá una PETICIÓN DE ADOPCIÓN ante la Justicia de Familia de San Luis (arts. 594 y ss. CCCN).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nTipo de adopción (plena/simple/integración), adoptante/s, adoptado: ${extra}` : ""}
+
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO (sentencia de adopción) 3.II.DATOS DEL/LOS ADOPTANTE/S (idoneidad, situación familiar, informe ambiental) 4.III.DATOS DEL ADOPTADO (nombre, edad, estado de adoptabilidad o vínculo) 5.IV.TIPO DE ADOPCIÓN SOLICITADA Y FUNDAMENTOS 6.V.INTERÉS SUPERIOR DEL NIÑO 7.VI.ESTADO DEL PROCESO PREVIO (guarda con fines adoptivos, declaración de adoptabilidad) 8.VII.DERECHO (arts. 594-637 CCCN) 9.VIII.PETITORIO (sentencia de adopción + inscripción registral) 10.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "filiacion",
+    label: "Acción de Filiación",
+    grupo: "Derecho de Familia",
+    color: "bg-purple-100 text-purple-800",
+    descripcion: "Reclamación o impugnación de filiación (arts. 582-593 CCCN)",
+    prompt: (caso, extra) => `Redactá una ACCIÓN DE FILIACIÓN ante la Justicia de Familia de San Luis (arts. 582 y ss. CCCN).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nTipo de acción (reclamación o impugnación), partes y hechos: ${extra}` : ""}
+
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO (reclamación o impugnación de filiación) 3.II.LEGITIMACIÓN ACTIVA (art. 582 o 589 CCCN según sea reclamación o impugnación) 4.III.HECHOS (vínculo biológico, inscripción registral, convivencia, reconocimiento) 5.IV.DERECHO (arts. 582-593 CCCN) 6.V.MEDIDA CAUTELAR (prueba de ADN) 7.VI.PRUEBA (pericial biológica, documental, testimonial) 8.VII.PETITORIO (sentencia que establezca/impugne la filiación + rectificación del acta de nacimiento) 9.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "cambio_apellido",
+    label: "Cambio de Nombre / Apellido",
+    grupo: "Derecho de Familia",
+    color: "bg-indigo-100 text-indigo-700",
+    descripcion: "Cambio o adición de nombre o apellido (Ley 18.248 / CCCN)",
+    prompt: (caso, extra) => `Redactá una PETICIÓN DE CAMBIO DE NOMBRE O APELLIDO ante la Justicia Provincial de San Luis (arts. 69-72 CCCN, Ley 18.248).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nNombre/apellido actual, nombre/apellido solicitado y motivo: ${extra}` : ""}
+
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO (cambio/adición de nombre o apellido) 3.II.DATOS DEL PETICIONANTE (nombre actual, DNI, domicilio) 4.III.NOMBRE/APELLIDO SOLICITADO 5.IV.CAUSAS JUSTIFICADAS (art. 69 CCCN: nombre o apellido extranjero, error u omisión registral, identidad de género, razones de protección de identidad, etc.) 6.V.DERECHO (arts. 69-72 CCCN) 7.VI.PUBLICACIÓN EDICTAL (si corresponde) 8.VII.PRUEBA 9.VIII.PETITORIO (resolución + oficio al Registro Civil) 10.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+  {
+    id: "permiso_viaje",
+    label: "Permiso para Viajar al Exterior",
+    grupo: "Derecho de Familia",
+    color: "bg-sky-100 text-sky-800",
+    descripcion: "Autorización judicial para viajar al exterior con hijo menor",
+    prompt: (caso, extra) => `Redactá una SOLICITUD DE AUTORIZACIÓN JUDICIAL PARA VIAJAR AL EXTERIOR CON HIJO MENOR ante la Justicia de Familia de San Luis (art. 645 CCCN).
+
+${MARCO_NORMATIVO}
+${datosBase(caso)}
+${extra ? `\nDestino, fechas, progenitor/a que viaja, motivo del viaje: ${extra}` : ""}
+
+ESTRUCTURA: 1.Encabezado 2.I.OBJETO (autorización para viajar) 3.II.DATOS DEL NIÑO (nombre, edad, DNI/pasaporte) 4.III.DATOS DEL PROGENITOR/A QUE VIAJA (nombre, DNI) 5.IV.VIAJE (destino, fechas de salida y retorno, motivo: turismo/tratamiento médico/visita familiar/educativo) 6.V.PROGENITOR/A QUE NO OTORGA AUTORIZACIÓN (razón: negativa injustificada, paradero desconocido, etc.) 7.VI.INTERÉS SUPERIOR DEL NIÑO 8.VII.DERECHO (art. 645 CCCN) 9.VIII.PETITORIO (autorización judicial para salida del país + oficio a Migraciones) 10.Firma
+Completá con [COMPLETAR] los datos faltantes.`,
+  },
+];
+
+// ─────────────────────────────────────────────
 // GRUPO: DERECHOS POSESORIOS, POSESORIOS Y SUCESORIOS
 // ─────────────────────────────────────────────
 const posesoriasYSucesorios = [
@@ -517,6 +645,7 @@ Completá con [COMPLETAR] los datos faltantes.`,
 // EXPORT: agrupado para el selector
 // ─────────────────────────────────────────────
 export const GRUPOS_MODELOS = [
+  { label: "Derecho de Familia", modelos: familia },
   { label: "Judiciales Provinciales", modelos: judicialesProvinciales },
   { label: "Judiciales Nacionales / Federales", modelos: judicialesNacionales },
   { label: "Posesorios, Reales y Sucesorios", modelos: posesoriasYSucesorios },
@@ -526,6 +655,7 @@ export const GRUPOS_MODELOS = [
 ];
 
 export const TODOS_MODELOS = [
+  ...familia,
   ...judicialesProvinciales,
   ...judicialesNacionales,
   ...posesoriasYSucesorios,
