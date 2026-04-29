@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Files } from "lucide-react";
+import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Files, Mic } from "lucide-react";
 
 const tipoDocLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -39,7 +39,9 @@ export default function DocumentosList({ caso, documentos }) {
   const [expandedId, setExpandedId] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [transcribiendo, setTranscribiendo] = useState(false);
+  const [transcribiendoAudio, setTranscribiendoAudio] = useState(false);
   const fileInputRef = useRef(null);
+  const audioInputRef = useRef(null);
   const bulkInputRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -164,6 +166,55 @@ INSTRUCCIONES ESTRICTAS:
 - Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [un título descriptivo conciso del documento, máximo 8 palabras].
 
 Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al final), sin comentarios ni aclaraciones previas.`;
+
+  const handleAudioUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTranscribiendoAudio(true);
+    // 1. Subir el audio
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setForm(prev => ({ ...prev, file_url, tipo_documento: "testimonio" }));
+    // 2. Transcribir con IA (LLM con soporte de audio)
+    const resultado = await base44.integrations.Core.InvokeLLM({
+      prompt: `Sos un transcriptor experto en documentos y declaraciones jurídicas argentinas.
+Transcribí este audio con la máxima fidelidad posible.
+INSTRUCCIONES:
+- Transcribí cada palabra dicha.
+- Usá puntuación correcta y párrafos.
+- Si hay varios hablantes, identificalos como [HABLANTE 1], [HABLANTE 2], etc.
+- Si algo no se entiende, escribí [INAUDIBLE].
+- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [título descriptivo del audio en máximo 8 palabras].
+
+Devolvé ÚNICAMENTE la transcripción completa con el título al final.`,
+      file_urls: [file_url],
+      model: "claude_sonnet_4_6",
+    });
+
+    const lines = resultado.split("\n");
+    const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
+    let textoFinal = resultado;
+    let tituloSugerido = file.name.replace(/\.[^/.]+$/, "");
+    if (tituloLine) {
+      tituloSugerido = tituloLine.replace("TÍTULO SUGERIDO:", "").trim() || tituloSugerido;
+      textoFinal = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+    }
+
+    let textoGuardar = textoFinal;
+    if (textoFinal.length > 8000) {
+      const blob = new Blob([textoFinal], { type: "text/plain" });
+      const txtFile = new File([blob], `audio_${Date.now()}.txt`, { type: "text/plain" });
+      const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+      textoGuardar = txt_url;
+    }
+
+    setForm(prev => ({
+      ...prev,
+      contenido_texto: textoGuardar,
+      titulo: prev.titulo || tituloSugerido,
+    }));
+    setTranscribiendoAudio(false);
+    e.target.value = "";
+  };
 
   const handleTranscribir = async () => {
     if (!form.file_url) return;
@@ -343,15 +394,15 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
             {/* Upload archivo */}
             <div className="grid gap-2">
               <Label>Archivo (imagen/PDF)</Label>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()} disabled={uploading || transcribiendoAudio}>
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {uploading ? "Subiendo..." : "Subir archivo"}
                 </Button>
-                {form.file_url && (
+                {form.file_url && !transcribiendoAudio && (
                   <Button type="button" variant="outline" size="sm" className="gap-2 text-primary" onClick={handleTranscribir} disabled={transcribiendo}>
                     {transcribiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-                    {transcribiendo ? "Transcribiendo..." : "Transcribir y nombrar con IA"}
+                    {transcribiendo ? "Transcribiendo..." : "Transcribir con IA"}
                   </Button>
                 )}
                 <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileUpload} />
@@ -359,6 +410,31 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
               {form.file_url && (
                 <p className="text-xs text-green-600">✓ Archivo cargado</p>
               )}
+            </div>
+
+            {/* Upload AUDIO */}
+            <div className="grid gap-2">
+              <Label className="flex items-center gap-2">
+                <Mic className="w-3.5 h-3.5 text-muted-foreground" /> Audio (transcripción automática)
+              </Label>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={transcribiendoAudio || uploading}
+                >
+                  {transcribiendoAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                  {transcribiendoAudio ? "Transcribiendo audio..." : "Subir audio y transcribir"}
+                </Button>
+                <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.mp4,.wav,.m4a,.ogg,.webm" className="hidden" onChange={handleAudioUpload} />
+                {transcribiendoAudio && (
+                  <p className="text-xs text-primary animate-pulse">Procesando audio con IA, puede tardar unos segundos...</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Soporta MP3, MP4, WAV, M4A, OGG — declara​ciones, testigos, audiencias</p>
             </div>
 
             <div className="grid gap-2">
