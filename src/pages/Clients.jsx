@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2, Users, FolderOpen } from "lucide-react";
 import ContraparteModal from "@/components/clients/ContraparteModal";
+import LegajoModal from "@/components/clients/LegajoModal";
 
 const emptyClient = {
   client_type: "persona_fisica",
@@ -47,6 +48,7 @@ export default function Clients() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyClient);
   const [contraparteClient, setContraparteClient] = useState(null);
+  const [legajoClient, setLegajoClient] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: clients = [], isLoading } = useQuery({
@@ -178,6 +180,9 @@ export default function Clients() {
                   <Button size="sm" variant="outline" onClick={() => setContraparteClient(client)} className="gap-1 text-xs text-blue-700 border-blue-300 hover:bg-blue-50">
                     <Users className="w-3 h-3" /> Contraparte
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => setLegajoClient(client)} className="gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-50">
+                    <FolderOpen className="w-3 h-3" /> Legajo
+                  </Button>
                   <Button size="sm" variant="ghost" className="text-destructive text-xs" onClick={() => deleteMutation.mutate(client.id)}>
                     <Trash2 className="w-3 h-3" />
                   </Button>
@@ -192,6 +197,12 @@ export default function Clients() {
         client={contraparteClient}
         open={!!contraparteClient}
         onClose={() => setContraparteClient(null)}
+      />
+
+      <LegajoModal
+        client={legajoClient}
+        open={!!legajoClient}
+        onClose={() => setLegajoClient(null)}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
