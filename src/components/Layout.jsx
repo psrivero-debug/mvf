@@ -40,7 +40,7 @@ const groups = [
   },
   {
     id: "herramientas",
-    label: "Herramientas IA",
+    label: "Herramientas",
     icon: Sparkles,
     items: [
       { path: "/redaccion", label: "Redacción IA", icon: MessageSquare },
