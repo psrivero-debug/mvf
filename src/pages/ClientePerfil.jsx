@@ -227,11 +227,7 @@ export default function ClientePerfil({ clientId, onClose }) {
               <Badge variant="outline" className="text-xs">{client.client_type === "persona_juridica" ? "Persona Jurídica" : "Persona Física"}</Badge>
             </div>
           </div>
-          <div className="hidden lg:flex items-center gap-6 text-center">
-            <div><p className="text-lg font-bold text-primary">{casos.length}</p><p className="text-xs text-muted-foreground">Casos</p></div>
-            <div><p className="text-lg font-bold text-blue-600">{presupuestos.length}</p><p className="text-xs text-muted-foreground">Presupuestos</p></div>
-            <div><p className="text-lg font-bold text-green-600">{formatPesos(totalRecibos)}</p><p className="text-xs text-muted-foreground">Total Cobrado</p></div>
-          </div>
+
         </div>
         <div className="px-6 lg:px-8 flex gap-1 overflow-x-auto">
           {TABS.map(({ id, label, icon: Icon }) => (
