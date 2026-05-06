@@ -9,7 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Ius from './pages/Ius';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/Dashboard.jsx';
 import Clients from './pages/Clients';
 import Cases from './pages/Cases';
 import Documents from './pages/Documents';
