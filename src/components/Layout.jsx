@@ -10,7 +10,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const topItems = [
-  { path: "/", label: "Panel", icon: LayoutDashboard },
   { path: "/clientes", label: "Clientes", icon: Users },
 ];
 
