@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2, Users, FolderOpen } from "lucide-react";
 import ContraparteModal from "@/components/clients/ContraparteModal";
 import LegajoModal from "@/components/clients/LegajoModal";
+import ClientDetailModal from "@/components/clients/ClientDetailModal";
 
 const emptyClient = {
   client_type: "persona_fisica",
@@ -49,6 +50,7 @@ export default function Clients() {
   const [form, setForm] = useState(emptyClient);
   const [contraparteClient, setContraparteClient] = useState(null);
   const [legajoClient, setLegajoClient] = useState(null);
+  const [detailClient, setDetailClient] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: clients = [], isLoading } = useQuery({
@@ -135,7 +137,7 @@ export default function Clients() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(client => (
-            <Card key={client.id} className="border-0 shadow-sm hover:shadow-md transition-all group">
+            <Card key={client.id} className="border-0 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={() => setDetailClient(client)}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -173,9 +175,9 @@ export default function Clients() {
                   {client.email && <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" />{client.email}</p>}
                   {client.address && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{client.address}</p>}
                 </div>
-                <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(client)} className="gap-1 text-xs">
-                    <Pencil className="w-3 h-3" /> Editar
+                <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap" onClick={e => e.stopPropagation()}>
+                  <Button size="sm" variant="outline" onClick={() => setDetailClient(client)} className="gap-1 text-xs">
+                    <Pencil className="w-3 h-3" /> Ver / Editar
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setContraparteClient(client)} className="gap-1 text-xs text-blue-700 border-blue-300 hover:bg-blue-50">
                     <Users className="w-3 h-3" /> Contraparte
@@ -192,6 +194,12 @@ export default function Clients() {
           ))}
         </div>
       )}
+
+      <ClientDetailModal
+        client={detailClient}
+        open={!!detailClient}
+        onClose={() => setDetailClient(null)}
+      />
 
       <ContraparteModal
         client={contraparteClient}
