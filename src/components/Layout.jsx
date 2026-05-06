@@ -4,13 +4,14 @@ import {
   MessageSquare, Scale, Menu, Shield, Calculator,
   ClipboardList, CheckCircle2, BookMarked, Receipt,
   FilePlus, ScanSearch, Archive, ChevronDown, ChevronRight,
-  FolderOpen, Sparkles
+  FolderOpen, Sparkles, CalendarDays
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const topItems = [
   { path: "/clientes", label: "Clientes", icon: Users },
+  { path: "/calendario", label: "Calendario", icon: CalendarDays },
 ];
 
 const groups = [

@@ -1,0 +1,81 @@
+{
+  "name": "Evento",
+  "type": "object",
+  "properties": {
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "turno",
+        "audiencia",
+        "cita",
+        "disponibilidad"
+      ],
+      "description": "Tipo de evento"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del evento"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del evento"
+    },
+    "hora_inicio": {
+      "type": "string",
+      "description": "Hora de inicio (HH:MM)"
+    },
+    "hora_fin": {
+      "type": "string",
+      "description": "Hora de fin (HH:MM)"
+    },
+    "abogada_email": {
+      "type": "string",
+      "description": "Email de la abogada propietaria del evento"
+    },
+    "abogada_nombre": {
+      "type": "string",
+      "description": "Nombre de la abogada"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente (si aplica)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n o notas del evento"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "disponible",
+        "ocupado",
+        "cancelado"
+      ],
+      "default": "ocupado",
+      "description": "Estado del evento"
+    },
+    "asignado_por": {
+      "type": "string",
+      "description": "Email de quien asign\u00f3 el turno (secretaria o la propia abogada)"
+    },
+    "numero_expediente": {
+      "type": "string",
+      "description": "N\u00famero de expediente relacionado (opcional)"
+    },
+    "juzgado": {
+      "type": "string",
+      "description": "Juzgado (para audiencias)"
+    }
+  },
+  "required": [
+    "tipo",
+    "fecha",
+    "hora_inicio",
+    "abogada_email"
+  ]
+}
