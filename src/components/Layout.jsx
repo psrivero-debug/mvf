@@ -80,14 +80,16 @@ export default function Layout() {
         flex flex-col transition-transform duration-300
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-6 border-b border-sidebar-border">
+        <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <Shield className="w-5 h-5 text-sidebar-primary-foreground" />
-            </div>
+            <img
+              src="https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png"
+              alt="Pérez & Funes"
+              className="w-12 h-12 rounded-full object-cover shrink-0"
+            />
             <div>
-              <h1 className="font-serif text-lg font-semibold text-white">Pérez & Funes</h1>
-              <p className="text-xs text-sidebar-foreground/60">Estudio Jurídico · Negocios Inmobiliarios</p>
+              <h1 className="font-serif text-base font-semibold text-white leading-tight">Pérez & Funes</h1>
+              <p className="text-xs text-sidebar-foreground/60">Estudio de Abogados</p>
             </div>
           </div>
         </div>
