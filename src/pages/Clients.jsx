@@ -12,8 +12,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
 
 const emptyClient = {
-  full_name: "", dni_cuit: "", email: "", phone: "", address: "",
+  nombre: "", apellido: "", full_name: "", dni_cuit: "", tipo_dni: "DNI",
+  estado_civil: "", email: "", phone: "", address: "",
   client_type: "persona_fisica", ocupacion: "", datos_a_tener_en_cuenta: "", notes: "", status: "activo"
+};
+
+const estadoCivilLabels = {
+  soltero: "Soltero/a",
+  casado: "Casado/a",
+  divorciado: "Divorciado/a",
+  viudo: "Viudo/a",
+  union_convivencial: "Unión Convivencial",
+  separado: "Separado/a",
 };
 
 export default function Clients() {
@@ -52,12 +62,18 @@ export default function Clients() {
   };
 
   const handleSubmit = () => {
+    const data = {
+      ...form,
+      full_name: `${form.nombre} ${form.apellido}`.trim(),
+    };
     if (editing) {
-      updateMutation.mutate({ id: editing.id, data: form });
+      updateMutation.mutate({ id: editing.id, data });
     } else {
-      createMutation.mutate(form);
+      createMutation.mutate(data);
     }
   };
+
+  const isFormValid = form.nombre && form.apellido && form.dni_cuit && form.address && form.estado_civil;
 
   const filtered = clients.filter(c =>
     c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -104,8 +120,11 @@ export default function Clients() {
                       {client.full_name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-semibold">{client.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{client.client_type === "persona_juridica" ? "Persona Jurídica" : "Persona Física"}</p>
+                      <p className="font-semibold">{client.apellido ? `${client.apellido}, ${client.nombre}` : client.full_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {client.client_type === "persona_juridica" ? "Persona Jurídica" : "Persona Física"}
+                        {client.estado_civil ? ` · ${estadoCivilLabels[client.estado_civil] || client.estado_civil}` : ""}
+                      </p>
                     </div>
                   </div>
                   <Badge variant={client.status === "activo" ? "default" : "secondary"} className="text-xs">
@@ -113,7 +132,7 @@ export default function Clients() {
                   </Badge>
                 </div>
                 <div className="mt-4 space-y-1.5 text-sm text-muted-foreground">
-                  {client.dni_cuit && <p className="flex items-center gap-2"><User className="w-3.5 h-3.5" />{client.dni_cuit}</p>}
+                  {client.dni_cuit && <p className="flex items-center gap-2"><User className="w-3.5 h-3.5" />{client.tipo_dni || "DNI"}: {client.dni_cuit}</p>}
                   {client.phone && <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" />{client.phone}</p>}
                   {client.email && <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" />{client.email}</p>}
                   {client.address && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{client.address}</p>}
@@ -138,17 +157,48 @@ export default function Clients() {
             <DialogTitle className="font-serif">{editing ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label>Nombre Completo *</Label>
-              <Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} />
-            </div>
+            {/* Nombres y Apellidos separados */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>DNI / CUIT</Label>
-                <Input value={form.dni_cuit} onChange={e => setForm({ ...form, dni_cuit: e.target.value })} />
+                <Label>Nombre/s <span className="text-destructive">*</span></Label>
+                <Input placeholder="Ej: Juan Carlos" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Tipo</Label>
+                <Label>Apellido/s <span className="text-destructive">*</span></Label>
+                <Input placeholder="Ej: García López" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} />
+              </div>
+            </div>
+
+            {/* Tipo doc + DNI */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label>Tipo doc. <span className="text-destructive">*</span></Label>
+                <Select value={form.tipo_dni} onValueChange={v => setForm({ ...form, tipo_dni: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["DNI","CUIT","CUIL","Pasaporte","Otro"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2 col-span-2">
+                <Label>Nº {form.tipo_dni || "DNI"} <span className="text-destructive">*</span></Label>
+                <Input placeholder="Ej: 30.123.456" value={form.dni_cuit} onChange={e => setForm({ ...form, dni_cuit: e.target.value })} />
+              </div>
+            </div>
+
+            {/* Estado civil + Tipo cliente */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Estado Civil <span className="text-destructive">*</span></Label>
+                <Select value={form.estado_civil} onValueChange={v => setForm({ ...form, estado_civil: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(estadoCivilLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Tipo de cliente</Label>
                 <Select value={form.client_type} onValueChange={v => setForm({ ...form, client_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -158,36 +208,41 @@ export default function Clients() {
                 </Select>
               </div>
             </div>
+
+            {/* Domicilio */}
+            <div className="grid gap-2">
+              <Label>Domicilio <span className="text-destructive">*</span></Label>
+              <Input placeholder="Calle, número, piso, localidad" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+            </div>
+
+            {/* Contacto */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Email</Label>
-                <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                <Label>Teléfono</Label>
+                <Input placeholder="Ej: 2664 123456" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Teléfono</Label>
-                <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                <Label>Email</Label>
+                <Input type="email" placeholder="ejemplo@mail.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label>Domicilio</Label>
-              <Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-            </div>
+
             <div className="grid gap-2">
               <Label>Ocupación / Profesión</Label>
               <Input placeholder="Ej: Comerciante, Empleado, Jubilado..." value={form.ocupacion} onChange={e => setForm({ ...form, ocupacion: e.target.value })} />
             </div>
             <div className="grid gap-2">
               <Label>Datos a tener en cuenta</Label>
-              <Textarea placeholder="Información relevante sobre el cliente: antecedentes, situación particular, etc." value={form.datos_a_tener_en_cuenta} onChange={e => setForm({ ...form, datos_a_tener_en_cuenta: e.target.value })} rows={3} />
+              <Textarea placeholder="Información relevante: antecedentes, situación particular, etc." value={form.datos_a_tener_en_cuenta} onChange={e => setForm({ ...form, datos_a_tener_en_cuenta: e.target.value })} rows={3} />
             </div>
             <div className="grid gap-2">
-              <Label>Notas</Label>
-              <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} />
+              <Label>Notas internas</Label>
+              <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={!form.full_name}>
+            <Button onClick={handleSubmit} disabled={!isFormValid}>
               {editing ? "Guardar Cambios" : "Crear Cliente"}
             </Button>
           </DialogFooter>

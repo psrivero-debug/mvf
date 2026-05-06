@@ -2,13 +2,45 @@
   "name": "Client",
   "type": "object",
   "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre/s del cliente"
+    },
+    "apellido": {
+      "type": "string",
+      "description": "Apellido/s del cliente"
+    },
     "full_name": {
       "type": "string",
-      "description": "Nombre completo del cliente"
+      "description": "Nombre completo (generado autom\u00e1ticamente)"
     },
     "dni_cuit": {
       "type": "string",
       "description": "DNI o CUIT del cliente"
+    },
+    "tipo_dni": {
+      "type": "string",
+      "enum": [
+        "DNI",
+        "CUIT",
+        "CUIL",
+        "Pasaporte",
+        "Otro"
+      ],
+      "default": "DNI",
+      "description": "Tipo de documento"
+    },
+    "estado_civil": {
+      "type": "string",
+      "enum": [
+        "soltero",
+        "casado",
+        "divorciado",
+        "viudo",
+        "union_convivencial",
+        "separado"
+      ],
+      "description": "Estado civil del cliente"
     },
     "email": {
       "type": "string",
@@ -20,7 +52,7 @@
     },
     "address": {
       "type": "string",
-      "description": "Domicilio"
+      "description": "Domicilio completo"
     },
     "client_type": {
       "type": "string",
@@ -53,6 +85,10 @@
     }
   },
   "required": [
-    "full_name"
+    "nombre",
+    "apellido",
+    "dni_cuit",
+    "address",
+    "estado_civil"
   ]
 }
