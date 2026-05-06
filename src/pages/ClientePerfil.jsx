@@ -29,6 +29,30 @@ const tipoDocLabels = { dni:"DNI", acta_nacimiento:"Acta Nacimiento", acta_matri
 const tipoDocColors = { dni:"bg-blue-100 text-blue-700", acta_nacimiento:"bg-green-100 text-green-700", acta_matrimonio:"bg-pink-100 text-pink-700", escritura:"bg-amber-100 text-amber-700", poder_notarial:"bg-purple-100 text-purple-700", sentencia:"bg-red-100 text-red-700", contrato:"bg-indigo-100 text-indigo-700", recibo:"bg-emerald-100 text-emerald-700", foto:"bg-orange-100 text-orange-700", otro:"bg-muted text-muted-foreground" };
 const formatPesos = (n) => (n || 0).toLocaleString("es-AR", { style:"currency", currency:"ARS", maximumFractionDigits:0 });
 
+// Trazabilidad: fecha/hora en Argentina (UTC-3)
+function fmtAuditoria(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return d.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+function AuditoriaTag({ record }) {
+  const creado = fmtAuditoria(record?.created_date);
+  const modificado = record?.updated_date && record.updated_date !== record.created_date ? fmtAuditoria(record.updated_date) : null;
+  const usuario = record?.created_by || null;
+  if (!creado) return null;
+  return (
+    <p className="text-[11px] text-muted-foreground/70 mt-1.5 flex items-center gap-1 flex-wrap">
+      <span>Creado: {creado}</span>
+      {usuario && <span>· por {usuario}</span>}
+      {modificado && <span>· Modificado: {modificado}</span>}
+    </p>
+  );
+}
+
 const emptyClient = { client_type:"persona_fisica", numero_legajo:"", nombre:"", apellido:"", dni_cuit:"", tipo_dni:"DNI", estado_civil:"", razon_social:"", condicion_iva:"", representante_legal:"", dni_representante:"", full_name:"", email:"", phone:"", address:"", localidad:"", ocupacion:"", datos_a_tener_en_cuenta:"", notes:"", status:"activo" };
 
 // ── Subcomponente: Fila de info ───────────────────────────────────
@@ -267,6 +291,14 @@ export default function ClientePerfil({ clientId, onClose }) {
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b pb-2">Contacto y Domicilio</p>
                   <InfoRow icon={Phone} label="Teléfono" value={client.phone} /><InfoRow icon={Mail} label="Email" value={client.email} /><InfoRow icon={MapPin} label="Domicilio" value={client.address} /><InfoRow icon={MapPin} label="Localidad" value={client.localidad} />
                 </CardContent></Card>
+                <Card className="border-0 shadow-sm"><CardContent className="p-5 space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b pb-2">Trazabilidad</p>
+                  <p className="text-xs text-muted-foreground">Creado: <span className="font-medium text-foreground">{fmtAuditoria(client.created_date)}</span>{client.created_by ? <span> · por <span className="font-medium text-foreground">{client.created_by}</span></span> : ""}</p>
+                  {client.updated_date && client.updated_date !== client.created_date && (
+                    <p className="text-xs text-muted-foreground">Última modificación: <span className="font-medium text-foreground">{fmtAuditoria(client.updated_date)}</span></p>
+                  )}
+                </CardContent></Card>
+
                 {(client.datos_a_tener_en_cuenta || client.notes) && (
                   <Card className="border-0 shadow-sm"><CardContent className="p-5 space-y-4">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b pb-2">Notas</p>
@@ -333,6 +365,7 @@ export default function ClientePerfil({ clientId, onClose }) {
                           <h3 className="font-semibold">{caso.titulo}</h3>
                           {caso.jurisdiccion && <p className="text-xs text-muted-foreground mt-0.5">{caso.jurisdiccion}</p>}
                           {caso.descripcion && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{caso.descripcion}</p>}
+                          <AuditoriaTag record={caso} />
                         </div>
                         <div className="flex flex-col items-end gap-2 shrink-0">
                           <p className="text-xs text-muted-foreground">{caso.created_date ? format(new Date(caso.created_date), "d MMM yyyy", { locale:es }) : ""}</p>
@@ -382,6 +415,7 @@ export default function ClientePerfil({ clientId, onClose }) {
                             {p.fecha_emision && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(new Date(p.fecha_emision + "T12:00:00"), "d MMM yyyy", { locale:es })}</span>}
                             {p.fecha_vencimiento && <span className="text-amber-600">Vence: {format(new Date(p.fecha_vencimiento + "T12:00:00"), "d MMM yyyy", { locale:es })}</span>}
                           </div>
+                          <AuditoriaTag record={p} />
                         </div>
                         <div className="text-right shrink-0 space-y-1">
                           <p className="text-lg font-bold text-primary">{formatPesos(p.monto_base)}</p>
@@ -432,6 +466,7 @@ export default function ClientePerfil({ clientId, onClose }) {
                         </div>
                         <p className="text-sm font-medium">{r.concepto}</p>
                         {r.fecha && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Calendar className="w-3 h-3" />{format(new Date(r.fecha + "T12:00:00"), "d 'de' MMMM yyyy", { locale:es })}</p>}
+                        <AuditoriaTag record={r} />
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <p className="text-xl font-bold text-green-700">{formatPesos(r.monto)}</p>
@@ -486,6 +521,7 @@ export default function ClientePerfil({ clientId, onClose }) {
                       <p className="text-xs font-semibold truncate">{doc.titulo}</p>
                       <Badge className={`text-[10px] mt-1 ${tipoDocColors[doc.tipo_documento] || "bg-muted text-muted-foreground"}`} variant="secondary">{tipoDocLabels[doc.tipo_documento] || doc.tipo_documento}</Badge>
                       {doc.fecha_documento && <p className="text-[10px] text-muted-foreground mt-0.5">{doc.fecha_documento}</p>}
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5">{fmtAuditoria(doc.created_date)}{doc.created_by ? ` · ${doc.created_by}` : ""}</p>
                     </div>
                   </div>
                 ))}
