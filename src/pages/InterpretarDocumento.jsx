@@ -169,7 +169,7 @@ export default function InterpretarDocumento() {
     w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; color: #222; padding: 40px; max-width: 900px; margin: 0 auto; }
+      body { font-family: "Times New Roman", Times, serif; font-size: 12pt; color: #222; padding: 40px; max-width: 900px; margin: 0 auto; }
       .header { border-bottom: 3px solid #1e3a5f; padding-bottom: 18px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; }
       .logo h1 { font-size: 20px; font-weight: bold; color: #1e3a5f; }
       .logo p { font-size: 11px; color: #666; margin-top: 3px; }

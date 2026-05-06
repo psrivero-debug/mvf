@@ -50,7 +50,7 @@ function imprimirRecibo(recibo) {
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #fff; color: #222; }
+    body { font-family: "Times New Roman", Times, serif; font-size: 12pt; background: #fff; color: #222; }
     .page { max-width: 800px; margin: 0 auto; padding: 40px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a5f; padding-bottom: 20px; margin-bottom: 30px; }
     .logo-area h1 { font-size: 22px; font-weight: bold; color: #1e3a5f; }

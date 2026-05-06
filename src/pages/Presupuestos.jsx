@@ -66,7 +66,7 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config) {
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; color: #222; background: #fff; font-size: 13px; }
+    body { font-family: "Times New Roman", Times, serif; color: #222; background: #fff; font-size: 12pt; }
     .page { max-width: 820px; margin: 0 auto; padding: 40px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a5f; padding-bottom: 20px; margin-bottom: 28px; }
     .logo h1 { font-size: 20px; font-weight: bold; color: #1e3a5f; }
