@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2, Users, FolderOpen } from "lucide-react";
 import ContraparteModal from "@/components/clients/ContraparteModal";
 import LegajoModal from "@/components/clients/LegajoModal";
-import ClientDetailModal from "@/components/clients/ClientDetailModal";
+import ClientePerfil from "@/pages/ClientePerfil";
 
 const emptyClient = {
   client_type: "persona_fisica",
@@ -106,6 +106,16 @@ export default function Clients() {
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Si hay un cliente seleccionado, mostrar el perfil completo
+  if (detailClient) {
+    return (
+      <ClientePerfil
+        clientId={detailClient.id}
+        onClose={() => setDetailClient(null)}
+      />
+    );
+  }
+
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -176,7 +186,7 @@ export default function Clients() {
                   {client.address && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{client.address}</p>}
                 </div>
                 <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap" onClick={e => e.stopPropagation()}>
-                  <Button size="sm" variant="outline" onClick={() => setDetailClient(client)} className="gap-1 text-xs">
+                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setDetailClient(client); }} className="gap-1 text-xs">
                     <Pencil className="w-3 h-3" /> Ver / Editar
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setContraparteClient(client)} className="gap-1 text-xs text-blue-700 border-blue-300 hover:bg-blue-50">
@@ -194,12 +204,6 @@ export default function Clients() {
           ))}
         </div>
       )}
-
-      <ClientDetailModal
-        client={detailClient}
-        open={!!detailClient}
-        onClose={() => setDetailClient(null)}
-      />
 
       <ContraparteModal
         client={contraparteClient}
