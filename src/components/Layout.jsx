@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Users, Briefcase, FileText, 
-  MessageSquare, Scale, Menu, X, Shield, Calculator, ClipboardList, CheckCircle2, BookMarked, Receipt, FilePlus, ScanSearch
+  MessageSquare, Scale, Menu, X, Shield, Calculator, ClipboardList, CheckCircle2, BookMarked, Receipt, FilePlus, ScanSearch, Archive
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { path: "/", label: "Panel", icon: LayoutDashboard },
   { path: "/clientes", label: "Clientes", icon: Users },
+  { path: "/legajos", label: "Legajos", icon: Archive },
   { path: "/causas", label: "Causas", icon: Briefcase },
   { path: "/documentos", label: "Documentos", icon: FileText },
   { path: "/ius", label: "Tabla IUS", icon: Calculator },

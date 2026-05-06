@@ -21,6 +21,7 @@ import EstudioCaso from './pages/EstudioCaso';
 import Recibos from './pages/Recibos';
 import Presupuestos from './pages/Presupuestos';
 import InterpretarDocumento from './pages/InterpretarDocumento';
+import Legajos from './pages/Legajos';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -57,6 +58,7 @@ const AuthenticatedApp = () => {
         <Route path="/recibos" element={<Recibos />} />
         <Route path="/presupuestos" element={<Presupuestos />} />
         <Route path="/interpretar" element={<InterpretarDocumento />} />
+        <Route path="/legajos" element={<Legajos />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />

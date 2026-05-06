@@ -1,0 +1,57 @@
+{
+  "name": "Legajo",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente al que pertenece el legajo"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente (referencia r\u00e1pida)"
+    },
+    "numero_legajo": {
+      "type": "string",
+      "description": "N\u00famero de legajo del cliente"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo o descripci\u00f3n del documento"
+    },
+    "tipo_documento": {
+      "type": "string",
+      "enum": [
+        "dni",
+        "acta_nacimiento",
+        "acta_matrimonio",
+        "acta_defuncion",
+        "escritura",
+        "poder_notarial",
+        "sentencia",
+        "contrato",
+        "recibo",
+        "certificado",
+        "foto",
+        "otro"
+      ],
+      "description": "Tipo de documento"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL de la imagen del documento"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Observaciones sobre el documento"
+    },
+    "fecha_documento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del documento (si aplica)"
+    }
+  },
+  "required": [
+    "client_id",
+    "titulo"
+  ]
+}
