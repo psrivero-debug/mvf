@@ -2,21 +2,34 @@
   "name": "Client",
   "type": "object",
   "properties": {
+    "client_type": {
+      "type": "string",
+      "enum": [
+        "persona_fisica",
+        "persona_juridica"
+      ],
+      "default": "persona_fisica",
+      "description": "Tipo de cliente"
+    },
     "nombre": {
       "type": "string",
-      "description": "Nombre/s del cliente"
+      "description": "Nombre/s del cliente (persona f\u00edsica)"
     },
     "apellido": {
       "type": "string",
-      "description": "Apellido/s del cliente"
+      "description": "Apellido/s del cliente (persona f\u00edsica)"
     },
     "full_name": {
       "type": "string",
-      "description": "Nombre completo (generado autom\u00e1ticamente)"
+      "description": "Nombre completo o raz\u00f3n social (generado)"
+    },
+    "razon_social": {
+      "type": "string",
+      "description": "Raz\u00f3n social (persona jur\u00eddica)"
     },
     "dni_cuit": {
       "type": "string",
-      "description": "DNI o CUIT del cliente"
+      "description": "DNI / CUIT del cliente"
     },
     "tipo_dni": {
       "type": "string",
@@ -30,6 +43,25 @@
       "default": "DNI",
       "description": "Tipo de documento"
     },
+    "condicion_iva": {
+      "type": "string",
+      "enum": [
+        "responsable_inscripto",
+        "monotributista",
+        "exento",
+        "consumidor_final",
+        "no_responsable"
+      ],
+      "description": "Condici\u00f3n frente al IVA (persona jur\u00eddica)"
+    },
+    "representante_legal": {
+      "type": "string",
+      "description": "Nombre del representante legal (persona jur\u00eddica)"
+    },
+    "dni_representante": {
+      "type": "string",
+      "description": "DNI del representante legal"
+    },
     "estado_civil": {
       "type": "string",
       "enum": [
@@ -40,7 +72,7 @@
         "union_convivencial",
         "separado"
       ],
-      "description": "Estado civil del cliente"
+      "description": "Estado civil (persona f\u00edsica)"
     },
     "email": {
       "type": "string",
@@ -54,14 +86,9 @@
       "type": "string",
       "description": "Domicilio completo"
     },
-    "client_type": {
+    "localidad": {
       "type": "string",
-      "enum": [
-        "persona_fisica",
-        "persona_juridica"
-      ],
-      "default": "persona_fisica",
-      "description": "Tipo de cliente"
+      "description": "Localidad / Ciudad"
     },
     "ocupacion": {
       "type": "string",
@@ -85,10 +112,6 @@
     }
   },
   "required": [
-    "nombre",
-    "apellido",
-    "dni_cuit",
-    "address",
-    "estado_civil"
+    "client_type"
   ]
 }

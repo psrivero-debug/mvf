@@ -12,9 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
 
 const emptyClient = {
-  nombre: "", apellido: "", full_name: "", dni_cuit: "", tipo_dni: "DNI",
-  estado_civil: "", email: "", phone: "", address: "",
-  client_type: "persona_fisica", ocupacion: "", datos_a_tener_en_cuenta: "", notes: "", status: "activo"
+  client_type: "persona_fisica",
+  // Persona física
+  nombre: "", apellido: "", dni_cuit: "", tipo_dni: "DNI", estado_civil: "",
+  // Persona jurídica
+  razon_social: "", condicion_iva: "", representante_legal: "", dni_representante: "",
+  // Comunes
+  full_name: "", email: "", phone: "", address: "", localidad: "",
+  ocupacion: "", datos_a_tener_en_cuenta: "", notes: "", status: "activo"
 };
 
 const estadoCivilLabels = {
@@ -24,6 +29,14 @@ const estadoCivilLabels = {
   viudo: "Viudo/a",
   union_convivencial: "Unión Convivencial",
   separado: "Separado/a",
+};
+
+const condicionIvaLabels = {
+  responsable_inscripto: "Responsable Inscripto",
+  monotributista: "Monotributista",
+  exento: "Exento",
+  consumidor_final: "Consumidor Final",
+  no_responsable: "No Responsable",
 };
 
 export default function Clients() {
@@ -64,7 +77,9 @@ export default function Clients() {
   const handleSubmit = () => {
     const data = {
       ...form,
-      full_name: `${form.nombre} ${form.apellido}`.trim(),
+      full_name: form.client_type === "persona_juridica"
+        ? form.razon_social
+        : `${form.nombre} ${form.apellido}`.trim(),
     };
     if (editing) {
       updateMutation.mutate({ id: editing.id, data });
@@ -73,7 +88,10 @@ export default function Clients() {
     }
   };
 
-  const isFormValid = form.nombre && form.apellido && form.dni_cuit && form.address && form.estado_civil;
+  const isJuridica = form.client_type === "persona_juridica";
+  const isFormValid = isJuridica
+    ? form.razon_social && form.dni_cuit && form.address && form.localidad && form.phone && form.condicion_iva && form.representante_legal && form.dni_representante
+    : form.nombre && form.apellido && form.dni_cuit && form.address && form.estado_civil;
 
   const filtered = clients.filter(c =>
     c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -120,10 +138,15 @@ export default function Clients() {
                       {client.full_name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-semibold">{client.apellido ? `${client.apellido}, ${client.nombre}` : client.full_name}</p>
+                      <p className="font-semibold">
+                        {client.client_type === "persona_juridica"
+                          ? client.razon_social || client.full_name
+                          : client.apellido ? `${client.apellido}, ${client.nombre}` : client.full_name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {client.client_type === "persona_juridica" ? "Persona Jurídica" : "Persona Física"}
-                        {client.estado_civil ? ` · ${estadoCivilLabels[client.estado_civil] || client.estado_civil}` : ""}
+                        {client.client_type === "persona_juridica"
+                          ? `Persona Jurídica${client.condicion_iva ? " · " + condicionIvaLabels[client.condicion_iva] : ""}`
+                          : `Persona Física${client.estado_civil ? " · " + (estadoCivilLabels[client.estado_civil] || client.estado_civil) : ""}`}
                       </p>
                     </div>
                   </div>
@@ -132,7 +155,8 @@ export default function Clients() {
                   </Badge>
                 </div>
                 <div className="mt-4 space-y-1.5 text-sm text-muted-foreground">
-                  {client.dni_cuit && <p className="flex items-center gap-2"><User className="w-3.5 h-3.5" />{client.tipo_dni || "DNI"}: {client.dni_cuit}</p>}
+                  {client.dni_cuit && <p className="flex items-center gap-2"><User className="w-3.5 h-3.5" />{client.client_type === "persona_juridica" ? "CUIT" : (client.tipo_dni || "DNI")}: {client.dni_cuit}</p>}
+                  {client.client_type === "persona_juridica" && client.representante_legal && <p className="flex items-center gap-2"><User className="w-3.5 h-3.5" />Rep.: {client.representante_legal}</p>}
                   {client.phone && <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" />{client.phone}</p>}
                   {client.email && <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" />{client.email}</p>}
                   {client.address && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{client.address}</p>}
@@ -156,81 +180,135 @@ export default function Clients() {
           <DialogHeader>
             <DialogTitle className="font-serif">{editing ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
-            {/* Nombres y Apellidos separados */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Nombre/s <span className="text-destructive">*</span></Label>
-                <Input placeholder="Ej: Juan Carlos" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Apellido/s <span className="text-destructive">*</span></Label>
-                <Input placeholder="Ej: García López" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} />
-              </div>
-            </div>
-
-            {/* Tipo doc + DNI */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label>Tipo doc. <span className="text-destructive">*</span></Label>
-                <Select value={form.tipo_dni} onValueChange={v => setForm({ ...form, tipo_dni: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["DNI","CUIT","CUIL","Pasaporte","Otro"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2 col-span-2">
-                <Label>Nº {form.tipo_dni || "DNI"} <span className="text-destructive">*</span></Label>
-                <Input placeholder="Ej: 30.123.456" value={form.dni_cuit} onChange={e => setForm({ ...form, dni_cuit: e.target.value })} />
-              </div>
-            </div>
-
-            {/* Estado civil + Tipo cliente */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Estado Civil <span className="text-destructive">*</span></Label>
-                <Select value={form.estado_civil} onValueChange={v => setForm({ ...form, estado_civil: v })}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(estadoCivilLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Tipo de cliente</Label>
-                <Select value={form.client_type} onValueChange={v => setForm({ ...form, client_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="persona_fisica">Persona Física</SelectItem>
-                    <SelectItem value="persona_juridica">Persona Jurídica</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Domicilio */}
+          <div className="grid gap-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
+            {/* Tipo de cliente - siempre primero */}
             <div className="grid gap-2">
-              <Label>Domicilio <span className="text-destructive">*</span></Label>
-              <Input placeholder="Calle, número, piso, localidad" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+              <Label>Tipo de cliente <span className="text-destructive">*</span></Label>
+              <Select value={form.client_type} onValueChange={v => setForm({ ...form, client_type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="persona_fisica">Persona Física</SelectItem>
+                  <SelectItem value="persona_juridica">Persona Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Contacto */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Teléfono</Label>
-                <Input placeholder="Ej: 2664 123456" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Email</Label>
-                <Input type="email" placeholder="ejemplo@mail.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-              </div>
-            </div>
+            {isJuridica ? (
+              <>
+                {/* PERSONA JURÍDICA */}
+                <div className="grid gap-2">
+                  <Label>Razón Social <span className="text-destructive">*</span></Label>
+                  <Input placeholder="Ej: Comercial XYZ S.A." value={form.razon_social} onChange={e => setForm({ ...form, razon_social: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>CUIT <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: 30-12345678-9" value={form.dni_cuit} onChange={e => setForm({ ...form, dni_cuit: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Condición frente al IVA <span className="text-destructive">*</span></Label>
+                    <Select value={form.condicion_iva} onValueChange={v => setForm({ ...form, condicion_iva: v })}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(condicionIvaLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Domicilio <span className="text-destructive">*</span></Label>
+                  <Input placeholder="Calle, número, piso" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Localidad <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: San Luis" value={form.localidad} onChange={e => setForm({ ...form, localidad: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Teléfono <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: 2664 123456" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                  </div>
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">Representante Legal</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Nombre y Apellido <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: Juan García" value={form.representante_legal} onChange={e => setForm({ ...form, representante_legal: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>DNI Representante <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: 30.123.456" value={form.dni_representante} onChange={e => setForm({ ...form, dni_representante: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Email</Label>
+                  <Input type="email" placeholder="ejemplo@empresa.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* PERSONA FÍSICA */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Nombre/s <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: Juan Carlos" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Apellido/s <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: García López" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Tipo doc. <span className="text-destructive">*</span></Label>
+                    <Select value={form.tipo_dni} onValueChange={v => setForm({ ...form, tipo_dni: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["DNI","CUIT","CUIL","Pasaporte","Otro"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2 col-span-2">
+                    <Label>Nº {form.tipo_dni || "DNI"} <span className="text-destructive">*</span></Label>
+                    <Input placeholder="Ej: 30.123.456" value={form.dni_cuit} onChange={e => setForm({ ...form, dni_cuit: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Estado Civil <span className="text-destructive">*</span></Label>
+                    <Select value={form.estado_civil} onValueChange={v => setForm({ ...form, estado_civil: v })}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(estadoCivilLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Ocupación / Profesión</Label>
+                    <Input placeholder="Ej: Comerciante, Empleado..." value={form.ocupacion} onChange={e => setForm({ ...form, ocupacion: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Domicilio <span className="text-destructive">*</span></Label>
+                  <Input placeholder="Calle, número, piso" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Localidad</Label>
+                    <Input placeholder="Ej: San Luis" value={form.localidad} onChange={e => setForm({ ...form, localidad: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Teléfono</Label>
+                    <Input placeholder="Ej: 2664 123456" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Email</Label>
+                  <Input type="email" placeholder="ejemplo@mail.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                </div>
+              </>
+            )}
 
-            <div className="grid gap-2">
-              <Label>Ocupación / Profesión</Label>
-              <Input placeholder="Ej: Comerciante, Empleado, Jubilado..." value={form.ocupacion} onChange={e => setForm({ ...form, ocupacion: e.target.value })} />
-            </div>
             <div className="grid gap-2">
               <Label>Datos a tener en cuenta</Label>
               <Textarea placeholder="Información relevante: antecedentes, situación particular, etc." value={form.datos_a_tener_en_cuenta} onChange={e => setForm({ ...form, datos_a_tener_en_cuenta: e.target.value })} rows={3} />
