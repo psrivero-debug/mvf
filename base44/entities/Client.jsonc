@@ -2,6 +2,10 @@
   "name": "Client",
   "type": "object",
   "properties": {
+    "numero_legajo": {
+      "type": "string",
+      "description": "N\u00famero de legajo \u00fanico del cliente (identificador interno)"
+    },
     "client_type": {
       "type": "string",
       "enum": [

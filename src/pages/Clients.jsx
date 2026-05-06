@@ -14,6 +14,7 @@ import ContraparteModal from "@/components/clients/ContraparteModal";
 
 const emptyClient = {
   client_type: "persona_fisica",
+  numero_legajo: "",
   // Persona física
   nombre: "", apellido: "", dni_cuit: "", tipo_dni: "DNI", estado_civil: "",
   // Persona jurídica
@@ -140,11 +141,18 @@ export default function Clients() {
                       {client.full_name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-semibold">
-                        {client.client_type === "persona_juridica"
-                          ? client.razon_social || client.full_name
-                          : client.apellido ? `${client.apellido}, ${client.nombre}` : client.full_name}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold">
+                          {client.client_type === "persona_juridica"
+                            ? client.razon_social || client.full_name
+                            : client.apellido ? `${client.apellido}, ${client.nombre}` : client.full_name}
+                        </p>
+                        {client.numero_legajo && (
+                          <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold">
+                            Leg. {client.numero_legajo}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {client.client_type === "persona_juridica"
                           ? `Persona Jurídica${client.condicion_iva ? " · " + condicionIvaLabels[client.condicion_iva] : ""}`
@@ -192,6 +200,15 @@ export default function Clients() {
             <DialogTitle className="font-serif">{editing ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
+            {/* Número de legajo */}
+            <div className="grid gap-2">
+              <Label>Nº de Legajo</Label>
+              <Input
+                placeholder="Ej: 2026-001"
+                value={form.numero_legajo}
+                onChange={e => setForm({ ...form, numero_legajo: e.target.value })}
+              />
+            </div>
             {/* Tipo de cliente - siempre primero */}
             <div className="grid gap-2">
               <Label>Tipo de cliente <span className="text-destructive">*</span></Label>
