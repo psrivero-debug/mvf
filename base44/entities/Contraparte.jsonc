@@ -1,0 +1,75 @@
+{
+  "name": "Contraparte",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente al que pertenece esta contraparte"
+    },
+    "nombre": {
+      "type": "string",
+      "description": "Nombre/s de la contraparte"
+    },
+    "apellido": {
+      "type": "string",
+      "description": "Apellido/s de la contraparte"
+    },
+    "domicilio": {
+      "type": "string",
+      "description": "Domicilio completo"
+    },
+    "localidad": {
+      "type": "string",
+      "description": "Localidad"
+    },
+    "dni_cuit": {
+      "type": "string",
+      "description": "DNI / CUIT / CUIL"
+    },
+    "tipo_doc": {
+      "type": "string",
+      "enum": [
+        "DNI",
+        "CUIT",
+        "CUIL"
+      ],
+      "default": "DNI"
+    },
+    "telefono": {
+      "type": "string",
+      "description": "Tel\u00e9fono"
+    },
+    "condicion_laboral": {
+      "type": "string",
+      "enum": [
+        "empleado",
+        "independiente",
+        "jubilado",
+        "pensionado",
+        "otro"
+      ],
+      "description": "Condici\u00f3n laboral"
+    },
+    "condicion_laboral_otro": {
+      "type": "string",
+      "description": "Descripci\u00f3n si condici\u00f3n laboral es 'otro'"
+    },
+    "donde_trabaja": {
+      "type": "string",
+      "description": "Lugar o empresa donde trabaja"
+    },
+    "parentesco": {
+      "type": "string",
+      "description": "Parentesco o v\u00ednculo con el cliente (ej: c\u00f3nyuge, padre, empleador)"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "client_id",
+    "nombre",
+    "apellido"
+  ]
+}

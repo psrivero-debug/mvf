@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, User, Phone, Mail, MapPin, Pencil, Trash2, Users } from "lucide-react";
+import ContraparteModal from "@/components/clients/ContraparteModal";
 
 const emptyClient = {
   client_type: "persona_fisica",
@@ -44,6 +45,7 @@ export default function Clients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyClient);
+  const [contraparteClient, setContraparteClient] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: clients = [], isLoading } = useQuery({
@@ -161,9 +163,12 @@ export default function Clients() {
                   {client.email && <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" />{client.email}</p>}
                   {client.address && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{client.address}</p>}
                 </div>
-                <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => openEdit(client)} className="gap-1 text-xs">
                     <Pencil className="w-3 h-3" /> Editar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setContraparteClient(client)} className="gap-1 text-xs text-blue-700 border-blue-300 hover:bg-blue-50">
+                    <Users className="w-3 h-3" /> Contraparte
                   </Button>
                   <Button size="sm" variant="ghost" className="text-destructive text-xs" onClick={() => deleteMutation.mutate(client.id)}>
                     <Trash2 className="w-3 h-3" />
@@ -174,6 +179,12 @@ export default function Clients() {
           ))}
         </div>
       )}
+
+      <ContraparteModal
+        client={contraparteClient}
+        open={!!contraparteClient}
+        onClose={() => setContraparteClient(null)}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
