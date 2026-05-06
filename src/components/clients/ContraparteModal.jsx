@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, FileText, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pencil, Trash2, Plus, FileText, Users, Download, Printer, Eye } from "lucide-react";
 
 const condicionLaboralLabels = {
   empleado: "Empleado",
@@ -25,7 +24,7 @@ const emptyForm = {
   donde_trabaja: "", parentesco: "", notas: "",
 };
 
-function imprimirActaPoder(client, contraparte, caratula, expediente, juzgado) {
+function buildActaTexto(client, caratula, expediente, juzgado) {
   const hoy = new Date();
   const diasMes = hoy.getDate();
   const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -33,43 +32,84 @@ function imprimirActaPoder(client, contraparte, caratula, expediente, juzgado) {
   const anio = hoy.getFullYear();
 
   const nombreCliente = client.client_type === "persona_juridica"
-    ? client.razon_social || client.full_name
+    ? (client.razon_social || client.full_name || "").toUpperCase()
     : `${client.nombre || ""} ${client.apellido || ""}`.trim().toUpperCase();
 
   const dniCliente = client.dni_cuit || "___________";
   const tipoDniCliente = client.client_type === "persona_juridica" ? "CUIT" : (client.tipo_dni || "DNI");
   const domicilioCliente = [client.address, client.localidad].filter(Boolean).join(", ") || "___________";
+  const expteStr = expediente ? ` EXPTE. ${expediente}` : "";
 
+  return {
+    nombreCliente, dniCliente, tipoDniCliente, domicilioCliente,
+    diasMes, mes, anio, expteStr,
+    p1: `En la Ciudad de San Luis, capital de la provincia del mismo nombre, República Argentina, a los ${diasMes} días del mes de ${mes} de ${anio}, comparece ante ${juzgado || "los Juzgados de Familia, Niñez y Adolescencia"}, la señora/el señor ${nombreCliente}, argentina/o, mayor de edad, habiendo acreditado su identidad con el ${tipoDniCliente} N° ${dniCliente}, con domicilio en calle ${domicilioCliente}.`,
+    p2: `EXPUSO: Que da y confiere PODER APUD ACTA a favor de la Dra. Silvia Raquel Pérez Arce, Abogada, Matrícula Profesional 2571 del CAPSL y a la Dra. María Valeria Funes Mat. 3081 CAPSL, correo electrónico silviaperezarce@giajsanluis.gov.ar, domicilio legal constituido en 25 de Mayo 477 Ciudad, para que en su nombre y representación intervenga en los autos caratulados "${caratula || "___________________________________"}"${expteStr}, expediente radicado en ${juzgado || "Juzgado de Familia N° ___"}.`,
+    p3: `Al efecto faculta para que las represente ante las autoridades que correspondan, con escritos, documentos, pudiendo entablar y contestar demandas, contrademandas, reconvenir, apelar, interponer todos los recursos y desistir, decir de nulidad, prestar y exigir juramentos, declinar y prorrogar jurisdicciones, oponer o absolver posiciones, oponer o renunciar a prescripciones, oponer y contestar excepciones, comprometer en árbitros o arbitradores, reconocer o impugnar obligaciones, solicitar embargos preventivos definitivos y sus cancelaciones, inhibiciones y sus levantamientos, solicitar reconocimiento de firmas, sus cotejos y designar toda clase de peritos, asistir a las audiencias y comparendos, con la facultad de hacer preguntas y presentar interrogatorios, solicitar diligencias e inscribir oficios, mandamientos y exhortos y todo cuanto otra facultad le fuere necesaria para el cumplimiento del presente mandato. Las facultades enunciadas son de mero carácter enumerativo, y en ningún caso limitativas: NO SE AUTORIZA A LA LETRADA COBRO ALGUNO EN REPRESENTACIÓN DEL PODERDANTE.`,
+    p4: `Con lo que se dio por terminado el acto, previa lectura y ratificación de su contenido, firma el compareciente. ANTE MÍ QUE DOY FE.-`,
+  };
+}
+
+function descargarWord(client, caratula, expediente, juzgado) {
+  const t = buildActaTexto(client, caratula, expediente, juzgado);
+
+  const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+  @page { size: A4; margin: 2.5cm 3cm; mso-page-orientation: portrait; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.8; color: #000; }
+  h1 { font-size: 14pt; font-weight: bold; text-align: center; letter-spacing: 3px; text-decoration: underline; margin-bottom: 24pt; margin-top: 0; }
+  p { text-align: justify; margin-bottom: 12pt; font-size: 12pt; }
+  .firma-wrap { margin-top: 60pt; text-align: center; }
+  .firma-line { display: inline-block; border-top: 1px solid #000; width: 220pt; padding-top: 4pt; font-size: 10pt; }
+</style>
+</head>
+<body>
+<h1>ACTA PODER</h1>
+<p>${t.p1}</p>
+<p>${t.p2}</p>
+<p>${t.p3}</p>
+<p>${t.p4}</p>
+<div class="firma-wrap"><div class="firma-line">Firma del Poderdante</div></div>
+</body></html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ActaPoder_${(t.nombreCliente).replace(/\s+/g, "_")}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function imprimirActaPoder(client, caratula, expediente, juzgado) {
+  const t = buildActaTexto(client, caratula, expediente, juzgado);
   const w = window.open("", "_blank");
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: "Times New Roman", Times, serif; font-size: 13pt; color: #000; background: #fff; }
-    .page { max-width: 820px; margin: 0 auto; padding: 60px 70px; line-height: 1.9; }
-    h1 { font-size: 16pt; font-weight: bold; text-align: center; letter-spacing: 4px; margin-bottom: 40px; text-decoration: underline; }
-    p { text-align: justify; margin-bottom: 18px; }
-    .firma-area { margin-top: 80px; display: flex; justify-content: center; }
-    .firma-box { text-align: center; width: 260px; border-top: 1px solid #000; padding-top: 8px; font-size: 11pt; }
-    @media print { body { margin: 0; } .page { padding: 40px 60px; max-width: 100%; } }
+    body { font-family: "Times New Roman", Times, serif; font-size: 12pt; color: #000; background: #fff; }
+    .page { width: 21cm; min-height: 29.7cm; margin: 0 auto; padding: 2.5cm 3cm; line-height: 1.8; }
+    h1 { font-size: 14pt; font-weight: bold; text-align: center; letter-spacing: 3px; margin-bottom: 24pt; text-decoration: underline; }
+    p { text-align: justify; margin-bottom: 12pt; }
+    .firma-area { margin-top: 60pt; text-align: center; }
+    .firma-box { display: inline-block; text-align: center; width: 220pt; border-top: 1px solid #000; padding-top: 6pt; font-size: 10pt; }
+    @media print { @page { size: A4; margin: 2.5cm 3cm; } body { margin: 0; } .page { padding: 0; width: 100%; } }
   </style>
   </head><body>
   <div class="page">
     <h1>ACTA PODER</h1>
-    <p>En la Ciudad de San Luis, capital de la provincia del mismo nombre, República Argentina, a los <strong>${diasMes}</strong> días del mes de <strong>${mes}</strong> de <strong>${anio}</strong>, comparece ante los Juzgados de ${juzgado || "Familia, Niñez y Adolescencia"}, la señora/el señor <strong>${nombreCliente}</strong>, argentina/o, mayor de edad, habiendo acreditado su identidad con el <strong>${tipoDniCliente} N° ${dniCliente}</strong>, con domicilio en calle <strong>${domicilioCliente}</strong>.</p>
-
-    <p><strong>EXPUSO:</strong> Que da y confiere <strong>PODER APUD ACTA</strong> a favor de la Dra. Silvia Raquel Pérez Arce, Abogada, Matrícula Profesional 2571 del CAPSL y a la Dra. María Valeria Funes Mat. 3081 CAPSL, correo electrónico silviaperezarce@giajsanluis.gov.ar, domicilio legal constituido en 25 de Mayo 477 Ciudad, para que en su nombre y representación intervenga en los autos caratulados <strong>"${caratula || "___________________________________"}"</strong>${expediente ? ` EXPTE. <strong>${expediente}</strong>` : ""}, expediente radicado en <strong>${juzgado || "Juzgado de Familia N° ___"}</strong>.</p>
-
-    <p>Al efecto faculta para que las represente ante las autoridades que correspondan, con escritos, documentos, pudiendo entablar y contestar demandas, contrademandas, reconvenir, apelar, interponer todos los recursos y desistir, decir de nulidad, prestar y exigir juramentos, declinar y prorrogar jurisdicciones, oponer o absolver posiciones, oponer o renunciar a prescripciones, oponer y contestar excepciones, comprometer en árbitros o arbitradores, reconocer o impugnar obligaciones, solicitar embargos preventivos definitivos y sus cancelaciones, inhibiciones y sus levantamientos, solicitar reconocimiento de firmas, sus cotejos y designar toda clase de peritos, asistir a las audiencias y comparendos, con la facultad de hacer preguntas y presentar interrogatorios, solicitar diligencias e inscribir oficios, mandamientos y exhortos y todo cuanto otra facultad le fuere necesaria para el cumplimiento del presente mandato. Las facultades enunciadas son de mero carácter enumerativo, y en ningún caso limitativas: <strong>NO SE AUTORIZA A LA LETRADA COBRO ALGUNO EN REPRESENTACIÓN DEL PODERDANTE.</strong></p>
-
-    <p>Con lo que se dio por terminado el acto, previa lectura y ratificación de su contenido, firma el compareciente. <strong>ANTE MÍ QUE DOY FE.-</strong></p>
-
-    <div class="firma-area">
-      <div class="firma-box">Firma del Poderdante</div>
-    </div>
+    <p>${t.p1}</p>
+    <p>${t.p2}</p>
+    <p>${t.p3}</p>
+    <p>${t.p4}</p>
+    <div class="firma-area"><div class="firma-box">Firma del Poderdante</div></div>
   </div>
   </body></html>`);
   w.document.close();
-  w.print();
+  setTimeout(() => w.print(), 400);
 }
 
 export default function ContraparteModal({ client, open, onClose }) {
@@ -78,6 +118,7 @@ export default function ContraparteModal({ client, open, onClose }) {
   const [showForm, setShowForm] = useState(false);
   const [showActaModal, setShowActaModal] = useState(false);
   const [actaData, setActaData] = useState({ caratula: "", expediente: "", juzgado: "Juzgado de Familia N° 2" });
+  const [actaConfirmada, setActaConfirmada] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: contrapartes = [] } = useQuery({
@@ -114,16 +155,16 @@ export default function ContraparteModal({ client, open, onClose }) {
   const isValid = form.nombre && form.apellido && form.dni_cuit && form.domicilio;
 
   const handleGenerarActa = (contraparte) => {
-    // Pre-completar caratula con datos del cliente y contraparte
     const nombreCliente = client.client_type === "persona_juridica"
       ? client.razon_social || client.full_name
       : `${client.apellido || ""} ${client.nombre || ""}`.trim().toUpperCase();
     setActaData({
-      caratula: `${nombreCliente} C/ ${contraparte.apellido.toUpperCase()} ${contraparte.nombre.toUpperCase()} S/ ___`,
+      caratula: `${nombreCliente} C/ ${contraparte.apellido.toUpperCase()} ${contraparte.nombre.toUpperCase()} S/ `,
       expediente: "",
       juzgado: "Juzgado de Familia N° 2",
       contraparte,
     });
+    setActaConfirmada(false);
     setShowActaModal(true);
   };
 
@@ -278,52 +319,85 @@ export default function ContraparteModal({ client, open, onClose }) {
       </Dialog>
 
       {/* Modal Acta Poder */}
-      <Dialog open={showActaModal} onOpenChange={setShowActaModal}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={showActaModal} onOpenChange={(v) => { setShowActaModal(v); setActaConfirmada(false); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif flex items-center gap-2">
-              <FileText className="w-5 h-5" /> Generar Acta Poder
+              <FileText className="w-5 h-5" /> Acta Poder
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="p-3 rounded-lg bg-muted/40 border text-sm">
-              <p className="font-medium">Poderdante: <span className="font-normal">{nombreCliente}</span></p>
-              {actaData.contraparte && (
-                <p className="font-medium">Contraparte: <span className="font-normal">{actaData.contraparte?.apellido}, {actaData.contraparte?.nombre}</span></p>
-              )}
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Carátula del expediente <span className="text-destructive">*</span></Label>
-              <Input
-                placeholder="Ej: ROSALES ANDREA C/ LÓPEZ MARIO S/ ALIMENTOS"
-                value={actaData.caratula}
-                onChange={e => setActaData({ ...actaData, caratula: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-1.5">
-                <Label>N° de Expediente</Label>
-                <Input placeholder="Ej: 404658/23" value={actaData.expediente} onChange={e => setActaData({ ...actaData, expediente: e.target.value })} />
+
+          {!actaConfirmada ? (
+            <>
+              <div className="grid gap-4 py-2">
+                <div className="p-3 rounded-lg bg-muted/40 border text-sm space-y-0.5">
+                  <p className="font-medium">Poderdante: <span className="font-normal">{nombreCliente}</span></p>
+                  {actaData.contraparte && (
+                    <p className="font-medium">Contraparte: <span className="font-normal">{actaData.contraparte?.apellido}, {actaData.contraparte?.nombre}</span></p>
+                  )}
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Carátula del expediente <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="Ej: ROSALES ANDREA C/ LÓPEZ MARIO S/ ALIMENTOS"
+                    value={actaData.caratula}
+                    onChange={e => setActaData({ ...actaData, caratula: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-1.5">
+                    <Label>N° de Expediente</Label>
+                    <Input placeholder="Ej: 404658/23" value={actaData.expediente} onChange={e => setActaData({ ...actaData, expediente: e.target.value })} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Juzgado</Label>
+                    <Input placeholder="Ej: Juzgado de Familia N° 2" value={actaData.juzgado} onChange={e => setActaData({ ...actaData, juzgado: e.target.value })} />
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-1.5">
-                <Label>Juzgado</Label>
-                <Input placeholder="Ej: Juzgado de Familia N° 2" value={actaData.juzgado} onChange={e => setActaData({ ...actaData, juzgado: e.target.value })} />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              ℹ️ El acta se genera con los datos del cliente cargado en el sistema. Revisá e imprimí para que el cliente firme.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowActaModal(false)}>Cancelar</Button>
-            <Button
-              className="gap-2"
-              onClick={() => { imprimirActaPoder(client, actaData.contraparte, actaData.caratula, actaData.expediente, actaData.juzgado); setShowActaModal(false); }}
-              disabled={!actaData.caratula}
-            >
-              <FileText className="w-4 h-4" /> Generar e Imprimir Acta
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowActaModal(false)}>Cancelar</Button>
+                <Button className="gap-2" onClick={() => setActaConfirmada(true)} disabled={!actaData.caratula}>
+                  <Eye className="w-4 h-4" /> Vista Previa
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              {/* Vista previa del acta */}
+              {(() => {
+                const t = buildActaTexto(client, actaData.caratula, actaData.expediente, actaData.juzgado);
+                return (
+                  <div className="border rounded-xl bg-white p-6 font-serif text-[13px] leading-relaxed text-black space-y-4 shadow-inner">
+                    <h2 className="text-center font-bold text-sm tracking-widest underline">ACTA PODER</h2>
+                    <p className="text-justify">{t.p1}</p>
+                    <p className="text-justify"><strong>EXPUSO:</strong> {t.p2.replace("EXPUSO: ", "")}</p>
+                    <p className="text-justify">{t.p3}</p>
+                    <p className="text-justify">{t.p4}</p>
+                    <div className="pt-10 flex justify-center">
+                      <div className="text-center border-t border-black w-48 pt-1 text-xs">Firma del Poderdante</div>
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                ✅ Revisá el acta. Luego descargala como Word o imprimila para que el cliente firme.
+              </p>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-2">
+                <Button variant="outline" onClick={() => setActaConfirmada(false)} className="gap-2">
+                  Volver a editar
+                </Button>
+                <Button variant="outline" className="gap-2 text-blue-700 border-blue-300 hover:bg-blue-50"
+                  onClick={() => descargarWord(client, actaData.caratula, actaData.expediente, actaData.juzgado)}>
+                  <Download className="w-4 h-4" /> Descargar Word
+                </Button>
+                <Button className="gap-2"
+                  onClick={() => { imprimirActaPoder(client, actaData.caratula, actaData.expediente, actaData.juzgado); }}>
+                  <Printer className="w-4 h-4" /> Confirmar e Imprimir
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
