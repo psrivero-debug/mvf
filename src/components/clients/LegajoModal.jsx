@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2, Eye, X, Loader2, FolderOpen, Plus, ImageIcon, Mic, FileText } from "lucide-react";
+import { Upload, Trash2, Eye, X, Loader2, FolderOpen, Plus, ImageIcon, Mic, FileText, RefreshCw } from "lucide-react";
 
 const tipoDocLabels = {
   dni: "DNI",
@@ -58,7 +58,7 @@ export default function LegajoModal({ client, open, onClose }) {
   const audioRef = useRef(null);
   const queryClient = useQueryClient();
 
-  const { data: legajos = [], isLoading } = useQuery({
+  const { data: legajos = [], isLoading, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["legajos", client?.id],
     queryFn: () => base44.entities.Legajo.filter({ client_id: client.id }, "-created_date"),
     enabled: !!client?.id,
@@ -149,7 +149,7 @@ export default function LegajoModal({ client, open, onClose }) {
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif flex items-center gap-2">
+            <DialogTitle className="font-serif flex items-center gap-2 flex-wrap">
               <FolderOpen className="w-5 h-5 text-primary" />
               Legajo — {nombreCliente}
               {client.numero_legajo && (
@@ -157,6 +157,15 @@ export default function LegajoModal({ client, open, onClose }) {
                   Nº {client.numero_legajo}
                 </span>
               )}
+              <button
+                onClick={() => refetch()}
+                disabled={isLoading}
+                className="ml-auto flex items-center gap-1.5 text-xs font-normal text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border"
+                title="Actualizar documentos"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                Actualizar
+              </button>
             </DialogTitle>
           </DialogHeader>
 
@@ -254,6 +263,13 @@ export default function LegajoModal({ client, open, onClose }) {
           {transcribiendoAudio && (
             <p className="text-xs text-primary text-center animate-pulse">
               Transcribiendo con IA — el documento se guardará automáticamente en el legajo...
+            </p>
+          )}
+
+          {/* Última actualización */}
+          {dataUpdatedAt > 0 && !showForm && (
+            <p className="text-[11px] text-muted-foreground/60 text-center">
+              Última actualización: {new Date(dataUpdatedAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </p>
           )}
 
