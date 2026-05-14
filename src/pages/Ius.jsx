@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Calculator, TrendingUp, Save, CheckSquare, Printer, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, TrendingUp, Save, CheckSquare, Printer, ArrowLeft, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import IusAgentChat from "@/components/ius/IusAgentChat";
 
 const categoriaLabels = {
   consulta: "Consulta",
@@ -43,6 +44,7 @@ export default function Ius() {
   const [baseForm, setBaseForm] = useState({ valor_base: "", descripcion: "", fecha_vigencia: "" });
   const [editingIusId, setEditingIusId] = useState(null);
   const [editingIusValue, setEditingIusValue] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
 
   const { data: configs = [] } = useQuery({
     queryKey: ["iusconfig"],
@@ -163,26 +165,29 @@ export default function Ius() {
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-              <ArrowLeft className="w-4 h-4" /> Panel
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-serif font-bold">Tabla de IUS</h1>
-            <p className="text-muted-foreground mt-1">Aranceles calculados sobre el valor unitario del IUS</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint} className="gap-2">
-            <Printer className="w-4 h-4" /> Imprimir {selectedIds.size > 0 ? `(${selectedIds.size})` : "tabla"}
-          </Button>
-          <Button onClick={() => { setForm(emptyTarifa); setEditing(null); setDialogOpen(true); }} className="gap-2">
-            <Plus className="w-4 h-4" /> Nuevo Concepto
-          </Button>
-        </div>
-      </div>
+         <div className="flex items-center gap-3">
+           <Link to="/">
+             <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+               <ArrowLeft className="w-4 h-4" /> Panel
+             </Button>
+           </Link>
+           <div>
+             <h1 className="text-2xl lg:text-3xl font-serif font-bold">Tabla de IUS</h1>
+             <p className="text-muted-foreground mt-1">Aranceles calculados sobre el valor unitario del IUS</p>
+           </div>
+         </div>
+         <div className="flex gap-2">
+           <Button variant="outline" onClick={() => setChatOpen(!chatOpen)} className="gap-2">
+             <MessageCircle className="w-4 h-4" /> Asistente IA
+           </Button>
+           <Button variant="outline" onClick={handlePrint} className="gap-2">
+             <Printer className="w-4 h-4" /> Imprimir {selectedIds.size > 0 ? `(${selectedIds.size})` : "tabla"}
+           </Button>
+           <Button onClick={() => { setForm(emptyTarifa); setEditing(null); setDialogOpen(true); }} className="gap-2">
+             <Plus className="w-4 h-4" /> Nuevo Concepto
+           </Button>
+         </div>
+       </div>
 
       {/* VALOR BASE IUS */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
@@ -431,8 +436,11 @@ export default function Ius() {
         </Card>
       )}
 
-      {/* DIALOG NUEVA / EDITAR TARIFA */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* CHAT AGENTE */}
+      {chatOpen && <IusAgentChat onClose={() => setChatOpen(false)} />}
+
+       {/* DIALOG NUEVA / EDITAR TARIFA */}
+       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-serif">{editing ? "Editar Concepto" : "Nuevo Concepto IUS"}</DialogTitle>
