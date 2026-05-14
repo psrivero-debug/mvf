@@ -41,6 +41,8 @@ export default function Ius() {
   const [editingBase, setEditingBase] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [baseForm, setBaseForm] = useState({ valor_base: "", descripcion: "", fecha_vigencia: "" });
+  const [editingIusId, setEditingIusId] = useState(null);
+  const [editingIusValue, setEditingIusValue] = useState("");
 
   const { data: configs = [] } = useQuery({
     queryKey: ["iusconfig"],
@@ -73,7 +75,11 @@ export default function Ius() {
 
   const updateTarifa = useMutation({
     mutationFn: ({ id, data }) => base44.entities.IusTarifa.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["iustarifas"] }); closeDialog(); },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ["iustarifas"] }); 
+      closeDialog();
+      setEditingIusId(null);
+    },
   });
 
   const deleteTarifa = useMutation({
@@ -314,7 +320,7 @@ export default function Ius() {
                   </th>
                   <th className="text-left px-5 py-3 font-medium">Concepto</th>
                   <th className="text-left px-5 py-3 font-medium">Categoría</th>
-                  <th className="text-right px-5 py-3 font-medium">IUS</th>
+                  <th className="text-right px-5 py-3 font-medium">IUS <span className="text-[10px] font-normal text-muted-foreground">(clic para editar)</span></th>
                   <th className="text-right px-5 py-3 font-medium">Valor estimado</th>
                   <th className="px-5 py-3"></th>
                 </tr>
@@ -340,8 +346,42 @@ export default function Ius() {
                       </Badge>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <span className="font-mono font-semibold text-primary text-base">{t.multiplicador}</span>
-                      <span className="text-muted-foreground text-xs ml-1">IUS</span>
+                      {editingIusId === t.id ? (
+                        <div className="flex gap-1 items-center justify-end">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={editingIusValue}
+                            onChange={e => setEditingIusValue(e.target.value)}
+                            className="w-16 h-7 text-right text-sm"
+                            autoFocus
+                            onBlur={() => {
+                              if (editingIusValue && editingIusValue !== String(t.multiplicador)) {
+                                updateTarifa.mutate({ id: t.id, data: { ...t, multiplicador: parseFloat(editingIusValue) } });
+                              } else {
+                                setEditingIusId(null);
+                              }
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                if (editingIusValue && editingIusValue !== String(t.multiplicador)) {
+                                  updateTarifa.mutate({ id: t.id, data: { ...t, multiplicador: parseFloat(editingIusValue) } });
+                                } else {
+                                  setEditingIusId(null);
+                                }
+                              }
+                              if (e.key === 'Escape') setEditingIusId(null);
+                            }}
+                          />
+                          <span className="text-muted-foreground text-xs">IUS</span>
+                        </div>
+                      ) : (
+                        <div className="cursor-pointer group" onClick={() => { setEditingIusId(t.id); setEditingIusValue(String(t.multiplicador)); }}>
+                          <span className="font-mono font-semibold text-primary text-base group-hover:text-accent transition-colors">{t.multiplicador}</span>
+                          <span className="text-muted-foreground text-xs ml-1">IUS</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-right">
                       {valorBase > 0 ? (
