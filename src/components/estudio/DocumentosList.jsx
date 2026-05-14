@@ -170,39 +170,21 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
   const handleAudioUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const nombreBase = file.name.replace(/\.[^/.]+$/, "");
     setTranscribiendoAudio(true);
+
     // 1. Subir el audio
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({ ...prev, file_url, tipo_documento: "testimonio" }));
-    // 2. Transcribir con IA (LLM con soporte de audio)
-    const resultado = await base44.integrations.Core.InvokeLLM({
-      prompt: `Sos un transcriptor experto en documentos y declaraciones jurídicas argentinas.
-Transcribí este audio con la máxima fidelidad posible.
-INSTRUCCIONES:
-- Transcribí cada palabra dicha.
-- Usá puntuación correcta y párrafos.
-- Si hay varios hablantes, identificalos como [HABLANTE 1], [HABLANTE 2], etc.
-- Si algo no se entiende, escribí [INAUDIBLE].
-- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [título descriptivo del audio en máximo 8 palabras].
+    const { file_url: audioUrl } = await base44.integrations.Core.UploadFile({ file });
+    setForm(prev => ({ ...prev, file_url: audioUrl, tipo_documento: "testimonio" }));
 
-Devolvé ÚNICAMENTE la transcripción completa con el título al final.`,
-      file_urls: [file_url],
-      model: "claude_sonnet_4_6",
-    });
+    // 2. Transcribir con Whisper (TranscribeAudio)
+    const transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrl });
 
-    const lines = resultado.split("\n");
-    const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
-    let textoFinal = resultado;
-    let tituloSugerido = file.name.replace(/\.[^/.]+$/, "");
-    if (tituloLine) {
-      tituloSugerido = tituloLine.replace("TÍTULO SUGERIDO:", "").trim() || tituloSugerido;
-      textoFinal = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
-    }
-
-    let textoGuardar = textoFinal;
-    if (textoFinal.length > 8000) {
-      const blob = new Blob([textoFinal], { type: "text/plain" });
-      const txtFile = new File([blob], `audio_${Date.now()}.txt`, { type: "text/plain" });
+    // 3. Guardar texto (si es muy largo, subir como .txt)
+    let textoGuardar = transcripcion;
+    if (transcripcion && transcripcion.length > 8000) {
+      const blob = new Blob([transcripcion], { type: "text/plain" });
+      const txtFile = new File([blob], `${nombreBase}.txt`, { type: "text/plain" });
       const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
       textoGuardar = txt_url;
     }
@@ -210,7 +192,7 @@ Devolvé ÚNICAMENTE la transcripción completa con el título al final.`,
     setForm(prev => ({
       ...prev,
       contenido_texto: textoGuardar,
-      titulo: prev.titulo || tituloSugerido,
+      titulo: prev.titulo || nombreBase,
     }));
     setTranscribiendoAudio(false);
     e.target.value = "";
