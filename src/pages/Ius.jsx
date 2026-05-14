@@ -377,9 +377,16 @@ export default function Ius() {
                           <span className="text-muted-foreground text-xs">IUS</span>
                         </div>
                       ) : (
-                        <div className="cursor-pointer group" onClick={() => { setEditingIusId(t.id); setEditingIusValue(String(t.multiplicador)); }}>
-                          <span className="font-mono font-semibold text-primary text-base group-hover:text-accent transition-colors">{t.multiplicador}</span>
-                          <span className="text-muted-foreground text-xs ml-1">IUS</span>
+                        <div className="cursor-pointer group">
+                          <div onClick={() => { setEditingIusId(t.id); setEditingIusValue(String(t.multiplicador)); }}>
+                            <span className="font-mono font-semibold text-primary text-base group-hover:text-accent transition-colors">{t.multiplicador}</span>
+                            <span className="text-muted-foreground text-xs ml-1">IUS</span>
+                          </div>
+                          {t.updated_date && (
+                            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                              {new Date(t.updated_date).toLocaleDateString('es-AR')}
+                            </p>
+                          )}
                         </div>
                       )}
                     </td>
