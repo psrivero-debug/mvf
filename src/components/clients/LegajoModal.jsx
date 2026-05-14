@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2, Eye, X, Loader2, FolderOpen, Plus, ImageIcon } from "lucide-react";
+import { Upload, Trash2, Eye, X, Loader2, FolderOpen, Plus, ImageIcon, Mic, FileText } from "lucide-react";
 
 const tipoDocLabels = {
   dni: "DNI",
@@ -52,8 +52,10 @@ export default function LegajoModal({ client, open, onClose }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
+  const [transcribiendoAudio, setTranscribiendoAudio] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileRef = useRef(null);
+  const audioRef = useRef(null);
   const queryClient = useQueryClient();
 
   const { data: legajos = [], isLoading } = useQuery({
@@ -82,6 +84,40 @@ export default function LegajoModal({ client, open, onClose }) {
   const resetForm = () => {
     setForm(emptyForm);
     setShowForm(false);
+  };
+
+  const handleAudioUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const nombreBase = file.name.replace(/\.[^/.]+$/, "");
+    setTranscribiendoAudio(true);
+
+    // 1. Subir audio
+    const { file_url: audioUrl } = await base44.integrations.Core.UploadFile({ file });
+
+    // 2. Transcribir con Whisper
+    let transcripcion = "";
+    transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrl });
+
+    // 3. Guardar transcripción como archivo .txt
+    const blob = new Blob([transcripcion], { type: "text/plain" });
+    const txtFile = new File([blob], `${nombreBase}.txt`, { type: "text/plain" });
+    const { file_url: txtUrl } = await base44.integrations.Core.UploadFile({ file: txtFile });
+
+    // 4. Guardar en legajo
+    createMutation.mutate({
+      titulo: nombreBase,
+      tipo_documento: "otro",
+      file_url: txtUrl,
+      notas: `Transcripción automática de audio: ${file.name}`,
+      fecha_documento: new Date().toISOString().split("T")[0],
+      client_id: client.id,
+      client_name: client.full_name,
+      numero_legajo: client.numero_legajo || "",
+    });
+
+    setTranscribiendoAudio(false);
+    e.target.value = "";
   };
 
   const handleFileUpload = async (file) => {
@@ -141,9 +177,14 @@ export default function LegajoModal({ client, open, onClose }) {
                   <div key={doc.id} className="group relative border rounded-xl overflow-hidden bg-card shadow-sm hover:shadow-md transition-all">
                     <div
                       className="aspect-[3/4] bg-muted/40 cursor-pointer overflow-hidden relative"
-                      onClick={() => setPreviewUrl(doc.file_url)}
+                      onClick={() => doc.file_url?.endsWith(".txt") ? window.open(doc.file_url, "_blank") : setPreviewUrl(doc.file_url)}
                     >
-                      {doc.file_url ? (
+                      {doc.file_url?.endsWith(".txt") ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-muted/30">
+                          <FileText className="w-10 h-10 text-primary/50" />
+                          <span className="text-[10px] text-muted-foreground text-center px-1">Transcripción</span>
+                        </div>
+                      ) : doc.file_url ? (
                         <img
                           src={doc.file_url}
                           alt={doc.titulo}
@@ -157,7 +198,7 @@ export default function LegajoModal({ client, open, onClose }) {
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                         <button
                           className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow"
-                          onClick={(e) => { e.stopPropagation(); setPreviewUrl(doc.file_url); }}
+                          onClick={(e) => { e.stopPropagation(); doc.file_url?.endsWith(".txt") ? window.open(doc.file_url, "_blank") : setPreviewUrl(doc.file_url); }}
                         >
                           <Eye className="w-4 h-4 text-primary" />
                         </button>
@@ -184,11 +225,36 @@ export default function LegajoModal({ client, open, onClose }) {
             )
           )}
 
-          {/* Botón agregar */}
+          {/* Botones de acción */}
           {!showForm && (
-            <Button variant="outline" className="w-full gap-2" onClick={() => setShowForm(true)}>
-              <Plus className="w-4 h-4" /> Subir Documento
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" className="flex-1 gap-2" onClick={() => setShowForm(true)}>
+                <Plus className="w-4 h-4" /> Subir Documento
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={() => audioRef.current?.click()}
+                disabled={transcribiendoAudio}
+              >
+                {transcribiendoAudio
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Mic className="w-4 h-4 text-primary" />}
+                {transcribiendoAudio ? "Transcribiendo audio..." : "Subir Audio y Transcribir"}
+              </Button>
+              <input
+                ref={audioRef}
+                type="file"
+                accept="audio/*,.mp3,.mp4,.wav,.m4a,.ogg,.webm,.flac"
+                className="hidden"
+                onChange={handleAudioUpload}
+              />
+            </div>
+          )}
+          {transcribiendoAudio && (
+            <p className="text-xs text-primary text-center animate-pulse">
+              Transcribiendo con IA — el documento se guardará automáticamente en el legajo...
+            </p>
           )}
 
           {/* Formulario inline */}
