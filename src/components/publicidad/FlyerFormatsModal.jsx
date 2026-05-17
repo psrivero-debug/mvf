@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles, Download, Copy, Check, ImageIcon, Film, LayoutTemplate, Maximize2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { buildPrompt } from "@/pages/Publicidad";
+import { buildPrompt } from "@/components/publicidad/buildPrompt";
 
 const FORMATOS = [
   {
