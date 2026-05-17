@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Sparkles, Trash2, Plus, Globe, Wand2, ImageIcon, Download, Share2 } from "lucide-react";
+import { Loader2, Sparkles, Trash2, Plus, Globe, Wand2, ImageIcon, Share2 } from "lucide-react";
 import FlyerForm from "@/components/publicidad/FlyerForm";
 import FlyerFormatsModal from "@/components/publicidad/FlyerFormatsModal";
 
+const LOGO_URL = "https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png";
 
 export default function Publicidad() {
   const queryClient = useQueryClient();
@@ -40,7 +41,7 @@ export default function Publicidad() {
   const handleGenerar = async (form) => {
     setGenerating(true);
 
-    const imagePrompt = `Professional legal services advertising background for Argentine law firm. Service: ${form.servicio}. ${form.descripcion || ""}. Deep navy blue and gold color palette, marble courthouse columns, leather law books, golden scales of justice, luxury law firm aesthetic, dramatic cinematic lighting, dark gradient areas at top and bottom for text overlay. NO text, NO letters, NO people, NO faces. Pure atmospheric background only.`;
+    const imagePrompt = `Professional legal advertising flyer background for an Argentine law firm. Service: "${form.servicio}". ${form.descripcion ? `Context: "${form.descripcion}".` : ""} Deep navy blue and gold color palette, marble courthouse columns, leather law books, golden scales of justice, dramatic cinematic lighting, luxury premium aesthetic. Dark gradient at top and bottom for text overlay. NO text, NO letters, NO words, NO numbers anywhere. Pure visual background only. 8K ultra-detailed.`;
 
     const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
     const flyer = await createMutation.mutateAsync({
@@ -66,7 +67,6 @@ export default function Publicidad() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-serif font-bold">Publicidad</h1>
@@ -83,7 +83,6 @@ export default function Publicidad() {
         </div>
       </div>
 
-      {/* Grid de flyers */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -111,7 +110,6 @@ export default function Publicidad() {
         </div>
       )}
 
-      {/* Dialog Nuevo Flyer */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -127,7 +125,6 @@ export default function Publicidad() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de formatos múltiples */}
       {formatsFlyer && (
         <FlyerFormatsModal
           flyer={formatsFlyer}
@@ -138,8 +135,6 @@ export default function Publicidad() {
     </div>
   );
 }
-
-const LOGO_URL = "https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png";
 
 function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
   return (
@@ -152,11 +147,11 @@ function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
             <ImageIcon className="w-8 h-8 opacity-30" />
           </div>
         )}
-        {/* Overlay profesional */}
+        {/* Overlay */}
         <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"
           style={{background:"linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
           <div className="flex items-center gap-2 px-3 pt-3">
-            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400 shadow-lg" style={{borderColor:"rgba(250,204,21,0.7)"}} />
+            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 shadow-lg" style={{borderColor:"rgba(250,204,21,0.7)"}} />
             <div>
               <p className="text-yellow-300 text-[9px] font-bold tracking-widest uppercase leading-none">Pérez & Funes</p>
               <p className="text-white text-[8px] tracking-wide leading-none mt-0.5 opacity-80">Estudio Jurídico</p>
@@ -180,10 +175,6 @@ function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
         <div>
           <p className="font-semibold text-sm truncate">{flyer.titulo}</p>
           <Badge variant="secondary" className="text-xs mt-1">{flyer.servicio}</Badge>
-        </div>
-        <div className="text-xs text-muted-foreground space-y-0.5">
-          {flyer.telefono && <p>📞 {flyer.telefono}</p>}
-          {flyer.domicilio && <p>📍 {flyer.domicilio}</p>}
         </div>
         <Button
           variant="outline"
