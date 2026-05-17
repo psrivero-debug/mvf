@@ -233,19 +233,19 @@ Respondé ÚNICAMENTE con el texto corregido, sin comentarios ni explicaciones.`
                       style={{background: "linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
                       {/* Header: logo + nombre estudio */}
                       <div className="flex items-center gap-2 px-3 pt-3">
-                        <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400/70 shadow-lg" />
+                        <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover shadow-lg" style={{border:"2px solid rgba(250,204,21,0.7)"}} />
                         <div>
                           <p className="text-yellow-300 text-[9px] font-bold tracking-widest uppercase leading-none">Pérez & Funes</p>
-                          <p className="text-white/80 text-[8px] tracking-wide leading-none mt-0.5">Estudio Jurídico</p>
+                          <p className="text-white text-[8px] tracking-wide leading-none mt-0.5 opacity-80">Estudio Jurídico</p>
                         </div>
                       </div>
                       {/* Footer: título + servicio + contacto */}
                       <div className="px-3 pb-3 space-y-1">
                         <p className="text-white font-bold text-[13px] leading-tight" style={{textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{overlay.titulo}</p>
                         <p className="text-yellow-300 text-[9px] font-medium tracking-wide uppercase leading-tight">{overlay.subtitulo}</p>
-                        <div className="w-8 h-px bg-yellow-400/60 my-1" />
-                        <p className="text-white/85 text-[8px] leading-snug">📞 {overlay.telefono}</p>
-                        <p className="text-white/85 text-[8px] leading-snug">📍 {overlay.domicilio}, San Luis</p>
+                        <div className="w-8 h-px bg-yellow-400 opacity-60 my-1" />
+                        <p className="text-white text-[8px] leading-snug opacity-90">📞 {overlay.telefono}</p>
+                        <p className="text-white text-[8px] leading-snug opacity-90">📍 {overlay.domicilio}, San Luis</p>
                       </div>
                     </div>
                   </div>

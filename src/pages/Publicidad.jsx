@@ -186,10 +186,10 @@ function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
         <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"
           style={{background:"linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
           <div className="flex items-center gap-2 px-3 pt-3">
-            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400/70 shadow-lg" />
+            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400 shadow-lg" style={{borderColor:"rgba(250,204,21,0.7)"}} />
             <div>
               <p className="text-yellow-300 text-[9px] font-bold tracking-widest uppercase leading-none">Pérez & Funes</p>
-              <p className="text-white/80 text-[8px] tracking-wide leading-none mt-0.5">Estudio Jurídico</p>
+              <p className="text-white text-[8px] tracking-wide leading-none mt-0.5 opacity-80">Estudio Jurídico</p>
             </div>
             {flyer.publicado && (
               <div className="ml-auto bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -200,9 +200,9 @@ function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
           <div className="px-3 pb-3 space-y-0.5">
             <p className="text-white font-bold text-[13px] leading-tight" style={{textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{flyer.titulo}</p>
             <p className="text-yellow-300 text-[9px] font-medium tracking-wide uppercase">{flyer.servicio}</p>
-            <div className="w-8 h-px bg-yellow-400/60 my-1" />
-            {flyer.telefono && <p className="text-white/85 text-[8px]">📞 {flyer.telefono}</p>}
-            {flyer.domicilio && <p className="text-white/85 text-[8px]">📍 {flyer.domicilio}</p>}
+            <div className="w-8 h-px bg-yellow-400 opacity-60 my-1" />
+            {flyer.telefono && <p className="text-white text-[8px] opacity-90">📞 {flyer.telefono}</p>}
+            {flyer.domicilio && <p className="text-white text-[8px] opacity-90">📍 {flyer.domicilio}</p>}
           </div>
         </div>
       </div>
