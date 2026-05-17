@@ -92,26 +92,6 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
     const telefono = formData.telefono || "2664 169108";
     const domicilio = formData.domicilio || "25 de Mayo N° 477";
 
-    // Paso 0: Corregir ortografía del título y descripción antes de usarlos en el prompt
-    let tituloCorregido = formData.titulo;
-    let descripcionCorregida = formData.descripcion || "Asesoramiento legal personalizado";
-    try {
-      const correccion = await base44.integrations.Core.InvokeLLM({
-        prompt: `Corregí la ortografía de estos textos en español. Devolvé SOLO un JSON con las claves "titulo" y "descripcion", sin explicaciones:
-- titulo: "${formData.titulo}"
-- descripcion: "${formData.descripcion || "Asesoramiento legal personalizado"}"`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            titulo: { type: "string" },
-            descripcion: { type: "string" },
-          },
-        },
-      });
-      if (correccion?.titulo) tituloCorregido = correccion.titulo;
-      if (correccion?.descripcion) descripcionCorregida = correccion.descripcion;
-    } catch { /* usa los valores originales si falla */ }
-
     // Paso 1: IA genera un prompt visual enriquecido con imágenes representativas
     let imagePrompt;
     try {
@@ -120,9 +100,9 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
 Generá un prompt detallado en inglés para crear una imagen publicitaria de alta calidad para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
 
 Datos del flyer:
-- Título: "${tituloCorregido}"
+- Título: "${formData.titulo}"
 - Servicio: "${formData.servicio}"
-- Mensaje clave: "${descripcionCorregida}"
+- Mensaje clave: "${formData.descripcion || "Asesoramiento legal personalizado"}"
 - Estilo visual: ${estilo}
 - Formato: ${layout}
 - Teléfono: ${telefono}
@@ -134,6 +114,7 @@ El prompt debe describir:
 3. Tipografía y texto a incluir
 4. Iluminación, composición y paleta de colores acorde al estilo
 5. Que NO aparezcan personas reales, sino ambientaciones, objetos o simbolismos
+6. CRÍTICO: Cualquier texto en la imagen debe tener ortografía perfecta en español. El título "${formData.titulo}" debe aparecer EXACTAMENTE como está escrito, sin cambiar ninguna letra.
 
 Respondé SOLO con el prompt en inglés, listo para usar en un generador de imágenes. Sin explicaciones adicionales.`,
         response_json_schema: null,
