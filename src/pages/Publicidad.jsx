@@ -1,206 +1,283 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Sparkles, Trash2, Plus, Globe, Wand2, ImageIcon, Share2 } from "lucide-react";
-import FlyerForm from "@/components/publicidad/FlyerForm";
-import FlyerFormatsModal from "@/components/publicidad/FlyerFormatsModal";
-
-const LOGO_URL = "https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png";
+import { Sparkles, Loader2, Download, RefreshCw, X } from "lucide-react";
 
 export default function Publicidad() {
-  const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [formatsFlyer, setFormatsFlyer] = useState(null);
-  const [generating, setGenerating] = useState(false);
-
-  const { data: flyers = [], isLoading } = useQuery({
-    queryKey: ["flyers"],
-    queryFn: () => base44.entities.Flyer.list("-created_date"),
+  const [paso, setPaso] = useState(1); // 1: formulario, 2: diseños
+  const [generando, setGenerando] = useState(false);
+  const [diseños, setDiseños] = useState([]);
+  const [formData, setFormData] = useState({
+    servicio: "",
+    descripcion: "",
+    publico: "",
+    claveVisual: "",
   });
+  const [selectedDesign, setSelectedDesign] = useState(null);
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Flyer.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["flyers"] }),
-  });
+  const handleGenerar = async () => {
+    if (!formData.servicio.trim()) {
+      alert("Especificá el servicio a promocionar");
+      return;
+    }
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Flyer.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["flyers"] }),
-  });
+    setGenerando(true);
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Flyer.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["flyers"] }),
-  });
+    try {
+      // Generar 3 opciones de diseños diferentes
+      const opciones = await base44.integrations.Core.InvokeLLM({
+        model: "gemini_3_1_pro",
+        prompt: `Sos un diseñador gráfico profesional especializado en marketing para bufetes de abogados argentinos.
 
-  const handleGenerar = async (form) => {
-    setGenerating(true);
+El usuario quiere promocionar: "${formData.servicio}"
+${formData.descripcion ? `Detalles: ${formData.descripcion}` : ""}
+${formData.publico ? `Público objetivo: ${formData.publico}` : ""}
+${formData.claveVisual ? `Estilo visual: ${formData.claveVisual}` : ""}
 
-    const imagePrompt = `Professional legal advertising flyer background for an Argentine law firm. Service: "${form.servicio}". ${form.descripcion ? `Context: "${form.descripcion}".` : ""} Deep navy blue and gold color palette, marble courthouse columns, leather law books, golden scales of justice, dramatic cinematic lighting, luxury premium aesthetic. Dark gradient at top and bottom for text overlay. NO text, NO letters, NO words, NO numbers anywhere. Pure visual background only. 8K ultra-detailed.`;
+Generá 3 conceptos visuales DIFERENTES y ATRACTIVOS para marketing. Para cada uno, describe:
+1. NOMBRE del concepto
+2. DESCRIPCIÓN visual detallada (colores, elementos gráficos, composición, mood)
+3. PROMPTS de imagen para generar
 
-    const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
-    const flyer = await createMutation.mutateAsync({
-      titulo: form.titulo,
-      servicio: form.servicio,
-      descripcion: form.descripcion,
-      imagen_url: url,
-      prompt_usado: imagePrompt,
-      publicado: false,
-      telefono: form.telefono,
-      domicilio: form.domicilio,
-    });
-    setGenerating(false);
-    setDialogOpen(false);
-    setFormatsFlyer({ ...flyer, imagen_url: url, _form: form });
+Responde en JSON:
+{
+  "opciones": [
+    {
+      "nombre": "string",
+      "descripcion": "string",
+      "prompts": ["prompt1 para imagen 1", "prompt2 para imagen 2", "prompt3 para imagen 3"]
+    },
+    ...
+  ]
+}`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            opciones: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  nombre: { type: "string" },
+                  descripcion: { type: "string" },
+                  prompts: { type: "array", items: { type: "string" } }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Generar imágenes para cada opción
+      const diseñosConImagenes = await Promise.all(
+        (opciones.opciones || []).map(async (opcion) => {
+          const imagenes = await Promise.all(
+            opcion.prompts.map(prompt =>
+              base44.integrations.Core.GenerateImage({
+                prompt: `Professional legal services marketing design. ${prompt}. High quality, attractive, Argentine law firm aesthetic.`
+              })
+            )
+          );
+
+          return {
+            nombre: opcion.nombre,
+            descripcion: opcion.descripcion,
+            imagenes: imagenes.map(img => img.url)
+          };
+        })
+      );
+
+      setDiseños(diseñosConImagenes);
+      setPaso(2);
+    } catch (error) {
+      console.error(error);
+      alert("Error generando diseños. Intentá de nuevo.");
+    } finally {
+      setGenerando(false);
+    }
   };
 
-  const togglePublicado = (flyer) => {
-    updateMutation.mutate({ id: flyer.id, data: { publicado: !flyer.publicado } });
+  const handleDescargar = async (imageUrl, nombreDiseno) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `diseño-marketing-${nombreDiseno.toLowerCase().replace(/\s+/g, "-")}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Error descargando imagen");
+    }
   };
-
-  const publicados = flyers.filter(f => f.publicado).length;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-serif font-bold">Publicidad</h1>
-          <p className="text-muted-foreground mt-1">Generá flyers con IA para redes sociales y publicalos en la web del estudio</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="gap-1.5 text-sm py-1.5 px-3">
-            <Globe className="w-3.5 h-3.5 text-green-500" />
-            {publicados} publicado{publicados !== 1 ? "s" : ""}
-          </Badge>
-          <Button onClick={() => setDialogOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" /> Nuevo Flyer
-          </Button>
-        </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-serif font-bold">Diseños para Marketing</h1>
+        <p className="text-muted-foreground mt-1">Generá diseños atractivos con IA para promocionar tus servicios legales</p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : flyers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-2xl text-center px-4">
-          <Wand2 className="w-12 h-12 text-muted-foreground/40 mb-4" />
-          <p className="text-muted-foreground font-medium">Aún no hay flyers generados</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">Creá tu primer flyer con IA para redes sociales</p>
-          <Button className="mt-4 gap-2" onClick={() => setDialogOpen(true)}>
-            <Sparkles className="w-4 h-4" /> Generar primer flyer
-          </Button>
+      {paso === 1 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Formulario */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium mb-2">Servicio a promocionar *</label>
+                <Input
+                  placeholder="Ej: Derecho de familia, divorcios, herencias..."
+                  value={formData.servicio}
+                  onChange={(e) => setFormData({ ...formData, servicio: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Descripción (opcional)</label>
+                <Textarea
+                  placeholder="Detalles sobre el servicio, puntos de venta, etc."
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                  rows={3}
+                  className="text-sm resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Público objetivo (opcional)</label>
+                <Input
+                  placeholder="Ej: Mujeres, jóvenes profesionales, empresas..."
+                  value={formData.publico}
+                  onChange={(e) => setFormData({ ...formData, publico: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Estilo visual (opcional)</label>
+                <Input
+                  placeholder="Ej: Moderno y minimalista, clásico y corporativo, creativo..."
+                  value={formData.claveVisual}
+                  onChange={(e) => setFormData({ ...formData, claveVisual: e.target.value })}
+                  className="text-sm"
+                />
+              </div>
+
+              <Button
+                onClick={handleGenerar}
+                disabled={generando}
+                className="w-full gap-2 py-6 text-base"
+              >
+                {generando ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generando diseños...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Generar 3 opciones
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Info */}
+          <div className="space-y-4">
+            <Card className="border-0 shadow-sm bg-accent/5">
+              <CardContent className="p-5 space-y-3">
+                <h3 className="font-semibold text-sm">¿Cómo funciona?</h3>
+                <ol className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex gap-2">
+                    <span className="font-bold text-primary">1</span>
+                    <span>Describí el servicio que querés promocionar</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-primary">2</span>
+                    <span>La IA generará 3 conceptos visuales diferentes</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-primary">3</span>
+                    <span>Mirá las opciones y descargá las que te gusten</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="font-bold text-primary">4</span>
+                    <span>Podés regenerar o solicitar nuevas variantes</span>
+                  </li>
+                </ol>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm bg-muted/30">
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground">
+                  💡 Tip: Cuanta más información proporciones, mejor serán los diseños. Describí el estilo que buscás y el público al que va dirigido.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {flyers.map((flyer) => (
-            <FlyerCard
-              key={flyer.id}
-              flyer={flyer}
-              onTogglePublicado={() => togglePublicado(flyer)}
-              onDelete={() => deleteMutation.mutate(flyer.id)}
-              onVerFormatos={() => setFormatsFlyer(flyer)}
-            />
-          ))}
+        <div className="space-y-6">
+          {/* Botón volver */}
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-serif font-bold">3 Opciones de Diseño</h2>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPaso(1);
+                setDiseños([]);
+              }}
+              className="gap-2"
+            >
+              <RefreshCw className="w-4 h-4" /> Generar nuevos
+            </Button>
+          </div>
+
+          {/* Galería de diseños */}
+          <div className="grid grid-cols-1 gap-8">
+            {diseños.map((diseño, idx) => (
+              <Card key={idx} className="border-0 shadow-sm overflow-hidden">
+                <CardContent className="p-6 space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{diseño.nombre}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{diseño.descripcion}</p>
+                  </div>
+
+                  {/* Galería de imágenes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {diseño.imagenes.map((imagen, imgIdx) => (
+                      <div key={imgIdx} className="relative group rounded-lg overflow-hidden bg-muted aspect-square">
+                        <img src={imagen} alt={`${diseño.nombre} ${imgIdx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="gap-1"
+                            onClick={() => handleDescargar(imagen, `${diseño.nombre}-${imgIdx + 1}`)}
+                          >
+                            <Download className="w-3.5 h-3.5" /> Descargar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-accent" /> Generar Flyer con IA
-            </DialogTitle>
-          </DialogHeader>
-          <FlyerForm
-            generating={generating}
-            onSubmit={handleGenerar}
-            onCancel={() => setDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {formatsFlyer && (
-        <FlyerFormatsModal
-          flyer={formatsFlyer}
-          onClose={() => setFormatsFlyer(null)}
-          onSaveFormat={(id, data) => updateMutation.mutate({ id, data })}
-        />
-      )}
-    </div>
-  );
-}
-
-function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
-  return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="relative aspect-[4/5] bg-muted">
-        {flyer.imagen_url ? (
-          <img src={flyer.imagen_url} alt={flyer.titulo} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-            <ImageIcon className="w-8 h-8 opacity-30" />
-          </div>
-        )}
-        {/* Overlay */}
-        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"
-          style={{background:"linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
-          <div className="flex items-center gap-2 px-3 pt-3">
-            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 shadow-lg" style={{borderColor:"rgba(250,204,21,0.7)"}} />
-            <div>
-              <p className="text-yellow-300 text-[9px] font-bold tracking-widest uppercase leading-none">Pérez & Funes</p>
-              <p className="text-white text-[8px] tracking-wide leading-none mt-0.5 opacity-80">Estudio Jurídico</p>
-            </div>
-            {flyer.publicado && (
-              <div className="ml-auto bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Globe className="w-2.5 h-2.5" /> Web
-              </div>
-            )}
-          </div>
-          <div className="px-3 pb-3 space-y-0.5">
-            <p className="text-white font-bold text-[13px] leading-tight" style={{textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{flyer.titulo}</p>
-            <p className="text-yellow-300 text-[9px] font-medium tracking-wide uppercase">{flyer.servicio}</p>
-            <div className="w-8 h-px bg-yellow-400 opacity-60 my-1" />
-            {flyer.telefono && <p className="text-white text-[8px] opacity-90">📞 {flyer.telefono}</p>}
-            {flyer.domicilio && <p className="text-white text-[8px] opacity-90">📍 {flyer.domicilio}</p>}
-          </div>
-        </div>
-      </div>
-      <div className="p-4 space-y-3">
-        <div>
-          <p className="font-semibold text-sm truncate">{flyer.titulo}</p>
-          <Badge variant="secondary" className="text-xs mt-1">{flyer.servicio}</Badge>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full gap-2 text-xs"
-          onClick={onVerFormatos}
-        >
-          <Share2 className="w-3.5 h-3.5" /> Ver formatos para redes
-        </Button>
-        <div className="flex items-center justify-between pt-1 border-t border-border">
-          <div className="flex items-center gap-2">
-            <Switch checked={flyer.publicado} onCheckedChange={onTogglePublicado} className="scale-75" />
-            <span className="text-xs text-muted-foreground">
-              {flyer.publicado ? <span className="text-green-600 font-medium">Publicado</span> : "Publicar"}
-            </span>
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-destructive hover:bg-destructive/10"
-            onClick={onDelete}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
