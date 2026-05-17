@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles, Download, Copy, Check, ImageIcon, Film, LayoutTemplate, Maximize2, SpellCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { buildBasePromptContext, buildFallbackPrompt } from "@/components/publicidad/buildPrompt";
+
 
 const FORMATOS = [
   {
@@ -97,42 +97,8 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
       domicilio: flyer.domicilio,
     };
 
-    const { estilo, layout } = buildBasePromptContext(formData, formatoId);
-    const telefono = formData.telefono || "2664 169108";
-    const domicilio = formData.domicilio || "25 de Mayo N° 477";
+    const imagePrompt = `Professional legal services advertising background for Argentine law firm. Service: ${formData.servicio}. ${formData.descripcion || ""}. Deep navy blue and gold color palette, marble courthouse columns, leather law books, golden scales of justice, luxury law firm aesthetic, dramatic cinematic lighting, dark gradient areas at top and bottom for text overlay. NO text, NO letters, NO people, NO faces. Pure atmospheric background only.`;
 
-    // Paso 1: IA genera un prompt visual enriquecido con imágenes representativas
-    let imagePrompt;
-    try {
-      const llmResult = await base44.integrations.Core.InvokeLLM({
-        model: "gemini_3_1_pro",
-        prompt: `You are a world-class art director specializing in premium legal services advertising for Argentine law firms.
-
-Create a highly detailed image generation prompt in English for a professional legal flyer background.
-
-Service being promoted: "${formData.servicio}"
-Visual style: ${estilo}
-Format/layout: ${layout}
-
-Requirements for the prompt you generate:
-- Describe a cinematic, ultra-high-quality photographic or 3D render scene
-- Include specific thematic elements for "${formData.servicio}": relevant objects, architectural details, symbolic imagery
-- Mandatory elements: marble courthouse columns, leather-bound law books, golden scales of justice, official legal seals, mahogany desk, aged parchment textures
-- Color palette: deep navy blue (#0a1628), rich gold (#c9a84c), ivory white, dark burgundy accents — luxury law firm aesthetic
-- Lighting: dramatic side lighting, golden hour warm glow, subtle lens flare, soft bokeh background
-- Composition: leave the top 25% and bottom 30% with dark gradient areas (important for text overlay)
-- Style: Award-winning advertising photography, 8K resolution, ultra-detailed, dramatic mood
-- NO people, NO faces, NO text, NO letters, NO numbers, NO words, NO typography anywhere
-
-Respond ONLY with the image prompt in English. No explanations, no preamble.`,
-        response_json_schema: null,
-      });
-      imagePrompt = (typeof llmResult === "string" ? llmResult : String(llmResult)) + " NO text, NO letters, NO words, NO numbers, NO typography whatsoever. Pure visual background only.";
-    } catch {
-      imagePrompt = buildFallbackPrompt(formData, formatoId);
-    }
-
-    // Paso 2: Generar la imagen con el prompt enriquecido
     const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
     setImagenes(prev => ({ ...prev, [formatoId]: url }));
     setGenerando(prev => ({ ...prev, [formatoId]: false }));
