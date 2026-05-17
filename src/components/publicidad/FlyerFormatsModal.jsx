@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Download, Copy, Check, ImageIcon, Film, LayoutTemplate, Maximize2 } from "lucide-react";
+import { Loader2, Sparkles, Download, Copy, Check, ImageIcon, Film, LayoutTemplate, Maximize2, SpellCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { buildBasePromptContext, buildFallbackPrompt } from "@/components/publicidad/buildPrompt";
 
@@ -74,6 +74,7 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
     video: buildTextoPromo(flyer, "video"),
     banner: buildTextoPromo(flyer, "banner"),
   }));
+  const [corrigiendo, setCorrigiendo] = useState({});
   const [copiado, setCopiado] = useState(null);
 
   const handleGenerarFormato = async (formatoId) => {
@@ -140,6 +141,21 @@ Respondé SOLO con el prompt en inglés, listo para usar en un generador de imá
     navigator.clipboard.writeText(textos[formatoId]);
     setCopiado(formatoId);
     setTimeout(() => setCopiado(null), 2000);
+  };
+
+  const handleCorregirTexto = async (formatoId) => {
+    setCorrigiendo(prev => ({ ...prev, [formatoId]: true }));
+    const corregido = await base44.integrations.Core.InvokeLLM({
+      prompt: `Corregí ortografía, gramática y puntuación del siguiente texto publicitario en español rioplatense. 
+Mantené exactamente el mismo formato, emojis, saltos de línea y hashtags. Solo corregí errores, no cambies el estilo ni el contenido.
+
+Texto:
+${textos[formatoId]}
+
+Respondé SOLO con el texto corregido, sin explicaciones.`,
+    });
+    setTextos(prev => ({ ...prev, [formatoId]: typeof corregido === "string" ? corregido : String(corregido) }));
+    setCorrigiendo(prev => ({ ...prev, [formatoId]: false }));
   };
 
   const formatoActual = FORMATOS.find(f => f.id === activeTab);
@@ -228,18 +244,33 @@ Respondé SOLO con el prompt en inglés, listo para usar en un generador de imá
                     rows={10}
                     className="text-xs resize-none font-mono"
                   />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-2 w-full"
-                    onClick={() => handleCopiarTexto(formato.id)}
-                  >
-                    {copiado === formato.id ? (
-                      <><Check className="w-3.5 h-3.5 text-green-500" /> ¡Copiado!</>
-                    ) : (
-                      <><Copy className="w-3.5 h-3.5" /> Copiar texto</>
-                    )}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 flex-1"
+                      onClick={() => handleCorregirTexto(formato.id)}
+                      disabled={corrigiendo[formato.id]}
+                    >
+                      {corrigiendo[formato.id] ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Corrigiendo...</>
+                      ) : (
+                        <><SpellCheck className="w-3.5 h-3.5" /> Corregir</>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 flex-1"
+                      onClick={() => handleCopiarTexto(formato.id)}
+                    >
+                      {copiado === formato.id ? (
+                        <><Check className="w-3.5 h-3.5 text-green-500" /> ¡Copiado!</>
+                      ) : (
+                        <><Copy className="w-3.5 h-3.5" /> Copiar</>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </TabsContent>
