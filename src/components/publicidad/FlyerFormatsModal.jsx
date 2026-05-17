@@ -105,6 +105,7 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
     let imagePrompt;
     try {
       const llmResult = await base44.integrations.Core.InvokeLLM({
+        model: "gemini_3_1_pro",
         prompt: `Sos un experto en diseño gráfico publicitario para estudios jurídicos argentinos.
 Generá un prompt detallado en inglés para crear una imagen publicitaria de alta calidad para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
 
