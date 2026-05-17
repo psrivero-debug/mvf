@@ -166,13 +166,22 @@ Respondé SOLO con el prompt en inglés, listo para usar en un generador de imá
   const handleCorregirTexto = async (formatoId) => {
     setCorrigiendo(prev => ({ ...prev, [formatoId]: true }));
     const corregido = await base44.integrations.Core.InvokeLLM({
-      prompt: `Corregí ortografía, gramática y puntuación del siguiente texto publicitario en español rioplatense. 
-Mantené exactamente el mismo formato, emojis, saltos de línea y hashtags. Solo corregí errores, no cambies el estilo ni el contenido.
+      model: "claude_sonnet_4_6",
+      prompt: `Sos un corrector de textos publicitarios profesional en español rioplatense.
 
-Texto:
+Tu tarea es corregir el siguiente texto SIN cambiar su estructura, estilo ni contenido. Solo debés:
+1. Corregir errores ortográficos (tildes, letras incorrectas, palabras mal escritas)
+2. Corregir errores gramaticales
+3. Asegurarte que cada oración comience con mayúscula
+4. Corregir puntuación incorrecta
+5. Mantener EXACTAMENTE los emojis, saltos de línea, hashtags y el orden del contenido
+
+NO agregues ni quites información. NO reformules oraciones. NO cambies palabras correctas.
+
+TEXTO A CORREGIR:
 ${textos[formatoId]}
 
-Respondé SOLO con el texto corregido, sin explicaciones.`,
+Respondé ÚNICAMENTE con el texto corregido, sin comentarios ni explicaciones.`,
     });
     setTextos(prev => ({ ...prev, [formatoId]: typeof corregido === "string" ? corregido : String(corregido) }));
     setCorrigiendo(prev => ({ ...prev, [formatoId]: false }));
