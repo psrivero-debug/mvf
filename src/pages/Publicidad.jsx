@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Sparkles, Trash2, Plus, Globe, Wand2, ImageIcon, Download, Share2 } from "lucide-react";
 import FlyerForm from "@/components/publicidad/FlyerForm";
 import FlyerFormatsModal from "@/components/publicidad/FlyerFormatsModal";
-import { buildPrompt } from "@/components/publicidad/buildPrompt";
+import { buildBasePromptContext, buildFallbackPrompt } from "@/components/publicidad/buildPrompt";
 
 export default function Publicidad() {
   const queryClient = useQueryClient();
@@ -39,8 +39,43 @@ export default function Publicidad() {
 
   const handleGenerar = async (form) => {
     setGenerating(true);
-    const prompt = buildPrompt(form, "post");
-    const { url } = await base44.integrations.Core.GenerateImage({ prompt });
+    const { estilo, layout } = buildBasePromptContext(form, "post");
+    const telefono = form.telefono || "2664 169108";
+    const domicilio = form.domicilio || "25 de Mayo N° 477";
+
+    // Paso 1: IA genera prompt visual enriquecido
+    let imagePrompt;
+    try {
+      const llmResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Sos un experto en diseño gráfico publicitario para estudios jurídicos argentinos.
+Generá un prompt detallado en inglés para crear una imagen publicitaria de alta calidad para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
+
+Datos del flyer:
+- Título: "${form.titulo}"
+- Servicio: "${form.servicio}"
+- Mensaje clave: "${form.descripcion || "Asesoramiento legal personalizado"}"
+- Estilo visual: ${estilo}
+- Formato: ${layout}
+- Teléfono: ${telefono}
+- Domicilio: ${domicilio}
+
+El prompt debe describir:
+1. Una imagen de fondo representativa y realista para "${form.servicio}" (ej: para Derecho de Familia → familia en sala de estar, para Derecho Laboral → personas en oficina, para Inmobiliario → edificios o contratos, etc.)
+2. Superposición de elementos gráficos del estudio jurídico
+3. Tipografía y texto a incluir
+4. Iluminación, composición y paleta de colores acorde al estilo
+5. Que NO aparezcan personas reales, sino ambientaciones, objetos o simbolismos
+
+Respondé SOLO con el prompt en inglés, listo para usar en un generador de imágenes. Sin explicaciones adicionales.`,
+        response_json_schema: null,
+      });
+      imagePrompt = typeof llmResult === "string" ? llmResult : String(llmResult);
+    } catch {
+      imagePrompt = buildFallbackPrompt(form, "post");
+    }
+
+    // Paso 2: Generar la imagen con el prompt enriquecido
+    const { url } = await base44.integrations.Core.GenerateImage({ prompt: imagePrompt });
     const flyer = await createMutation.mutateAsync({
       titulo: form.titulo,
       servicio: form.servicio,
