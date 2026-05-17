@@ -23,14 +23,5 @@ export function buildBasePromptContext(form, formato) {
 // Prompt básico de respaldo si falla el LLM
 export function buildFallbackPrompt(form, formato) {
   const { estilo, layout } = buildBasePromptContext(form, formato);
-  return `Create a professional legal services promotional image for "${form.titulo}" — a law firm called "Pérez & Funes Estudio Jurídico". 
-
-Service being promoted: ${form.servicio}
-${form.descripcion ? `Key message: ${form.descripcion}` : ""}
-
-Design style: ${estilo}
-Layout format: ${layout}
-Include firm name "Pérez & Funes Estudio Jurídico", phone number "${form.telefono || "2664 169108"}", address "${form.domicilio || "25 de Mayo N° 477"}"
-Include scales of justice imagery or legal symbols. Clear text hierarchy. "Consultá hoy" call to action.
-High quality advertising design. No real people, focus on design elements and typography.`;
+  return `Professional background image for a legal services flyer promoting "${form.servicio}". Law firm aesthetic. ${estilo}. ${layout}. Symbolic legal elements: scales of justice, law books, wooden gavel, documents. No real people. Absolutely no text, no letters, no words, no numbers, no typography anywhere in the image. Pure visual background only. High quality advertising photography.`;
 }
