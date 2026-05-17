@@ -1,0 +1,43 @@
+{
+  "name": "Flyer",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo principal del flyer"
+    },
+    "servicio": {
+      "type": "string",
+      "description": "Tipo de servicio que promueve"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del servicio"
+    },
+    "imagen_url": {
+      "type": "string",
+      "description": "URL de la imagen generada por IA"
+    },
+    "prompt_usado": {
+      "type": "string",
+      "description": "Prompt utilizado para generar la imagen"
+    },
+    "publicado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el flyer se muestra en la p\u00e1gina web p\u00fablica"
+    },
+    "telefono": {
+      "type": "string",
+      "description": "Tel\u00e9fono de contacto en el flyer"
+    },
+    "domicilio": {
+      "type": "string",
+      "description": "Domicilio del estudio en el flyer"
+    }
+  },
+  "required": [
+    "titulo",
+    "servicio"
+  ]
+}

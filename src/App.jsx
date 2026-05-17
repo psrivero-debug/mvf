@@ -23,6 +23,7 @@ import Presupuestos from './pages/Presupuestos';
 import InterpretarDocumento from './pages/InterpretarDocumento';
 import Legajos from './pages/Legajos';
 import Calendario from './pages/Calendario';
+import Publicidad from './pages/Publicidad';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
         <Route path="/interpretar" element={<InterpretarDocumento />} />
         <Route path="/legajos" element={<Legajos />} />
         <Route path="/calendario" element={<Calendario />} />
+        <Route path="/publicidad" element={<Publicidad />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />

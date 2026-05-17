@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Scale, Shield, Briefcase, Home, Users, Phone, Mail, MapPin, ChevronRight, Star, CheckCircle, ArrowRight, Menu, X } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const services = [
   {
@@ -43,6 +44,13 @@ export default function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [form, setForm] = useState({ nombre: "", email: "", telefono: "", consulta: "" });
   const [sent, setSent] = useState(false);
+  const [flyers, setFlyers] = useState([]);
+
+  useEffect(() => {
+    base44.entities.Flyer.filter({ publicado: true }, "-created_date", 8)
+      .then(setFlyers)
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -66,6 +74,7 @@ export default function Landing() {
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
             <a href="#servicios" className="hover:text-[hsl(222,47%,18%)] transition-colors">Servicios</a>
             <a href="#nosotros" className="hover:text-[hsl(222,47%,18%)] transition-colors">Nosotros</a>
+            {flyers.length > 0 && <a href="#publicidad" className="hover:text-[hsl(222,47%,18%)] transition-colors">Ofertas</a>}
             <a href="#testimonios" className="hover:text-[hsl(222,47%,18%)] transition-colors">Testimonios</a>
             <a href="#contacto" className="bg-[hsl(222,47%,18%)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(222,47%,25%)] transition-colors">
               Consultar ahora
@@ -242,6 +251,44 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* FLYERS PUBLICIDAD */}
+      {flyers.length > 0 && (
+        <section id="publicidad" className="py-24 bg-white">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="text-center mb-14">
+              <p className="text-[hsl(42,87%,45%)] text-sm font-semibold uppercase tracking-wider mb-3">Nuestras Ofertas</p>
+              <h2 className="font-serif text-3xl lg:text-4xl font-bold text-[hsl(222,47%,18%)]">Servicios destacados</h2>
+              <p className="text-gray-500 mt-4 max-w-xl mx-auto">Descubrí nuestras propuestas y servicios especiales.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {flyers.map(flyer => (
+                <div key={flyer.id} className="rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow border border-gray-100 group">
+                  <div className="relative aspect-[4/5]">
+                    <img src={flyer.imagen_url} alt={flyer.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute top-3 left-3 flex items-center gap-2 bg-white/90 backdrop-blur rounded-full px-2 py-1">
+                      <img src="https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png" alt="Logo" className="w-5 h-5 rounded-full object-cover" />
+                      <span className="text-[10px] font-semibold text-[hsl(222,47%,18%)]">Pérez & Funes</span>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <p className="text-white font-serif font-bold text-lg leading-tight">{flyer.titulo}</p>
+                      <p className="text-white/80 text-xs mt-1">{flyer.servicio}</p>
+                      {flyer.telefono && <p className="text-white/70 text-xs mt-2">📞 {flyer.telefono}</p>}
+                      {flyer.domicilio && <p className="text-white/70 text-xs">📍 {flyer.domicilio}</p>}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-[hsl(222,47%,18%)]">
+                    <a href="#contacto" className="w-full inline-flex items-center justify-center gap-2 bg-[hsl(42,87%,55%)] hover:bg-[hsl(42,87%,48%)] text-[hsl(222,47%,11%)] font-semibold text-sm py-2.5 rounded-xl transition-all">
+                      Consultar ahora <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* TESTIMONIOS */}
       <section id="testimonios" className="py-24 bg-gray-50">
