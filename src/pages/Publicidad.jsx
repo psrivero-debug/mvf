@@ -49,33 +49,23 @@ export default function Publicidad() {
       const llmResult = await base44.integrations.Core.InvokeLLM({
         model: "gemini_3_1_pro",
         prompt: `Sos un experto en diseño gráfico publicitario para estudios jurídicos argentinos.
-Generá un prompt detallado en inglés para crear una PIEZA GRÁFICA PUBLICITARIA COMPLETA para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
+Generá un prompt en inglés para crear un FONDO VISUAL de alta calidad para un flyer publicitario de estudio jurídico.
 
-La pieza debe tener TODO integrado como un diseño profesional terminado:
+Servicio: "${form.servicio}"
+Estilo: ${estilo}
+Formato: ${layout}
 
-Datos a incluir en la pieza:
-- Nombre del estudio: "Pérez & Funes Estudio Jurídico"
-- Título destacado: "${form.titulo}"
-- Servicio: "${form.servicio}"
-- Mensaje: "${form.descripcion || "Asesoramiento legal personalizado"}"
-- Teléfono: "${telefono}"
-- Domicilio: "${domicilio}, San Luis"
-- Estilo visual: ${estilo}
-- Formato: ${layout}
+El prompt debe describir SOLO elementos visuales sin texto:
+1. Fondo temático representativo para "${form.servicio}" (objetos, arquitectura, simbolismos legales)
+2. Elementos jurídicos: balanza, togas, libros de derecho, columnas de tribunal, sellos
+3. Paleta: azul marino oscuro profundo, dorado, crema. Estilo premium elegante
+4. Sin personas reales. Sin texto, sin letras, sin palabras, sin números.
+5. Dejar zonas con degradado oscuro en la parte superior e inferior para que se pueda superponer texto
 
-El prompt debe describir una pieza gráfica completa que incluya:
-1. Fondo visual temático y elegante para "${form.servicio}"
-2. Zona superior con el nombre "Pérez & Funes Estudio Jurídico" en tipografía serif dorada elegante
-3. Título central grande y destacado: "${form.titulo}" en tipografía bold blanca o dorada
-4. Texto del servicio y mensaje en tipografía smaller debajo del título
-5. Zona inferior con teléfono y domicilio en tipografía clara sobre banda oscura semitransparente
-6. Paleta: azul marino oscuro (#1a2744), dorado (#c9a84c), blanco y crema. Estilo premium legal argentino
-7. Composición equilibrada, jerarquía visual clara, aspecto de flyer profesional impreso
-
-Respondé SOLO con el prompt en inglés, listo para usar en un generador de imágenes. Sin explicaciones adicionales.`,
+Respondé SOLO con el prompt en inglés. Sin explicaciones.`,
         response_json_schema: null,
       });
-      imagePrompt = typeof llmResult === "string" ? llmResult : String(llmResult);
+      imagePrompt = (typeof llmResult === "string" ? llmResult : String(llmResult)) + " NO text, NO letters, NO words, NO numbers, NO typography whatsoever. Pure visual background only.";
     } catch {
       imagePrompt = buildFallbackPrompt(form, "post");
     }
@@ -179,8 +169,9 @@ Respondé SOLO con el prompt en inglés, listo para usar en un generador de imá
   );
 }
 
+const LOGO_URL = "https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png";
+
 function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
-  const LOGO_URL = "https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png";
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="relative aspect-[4/5] bg-muted">
@@ -191,14 +182,29 @@ function FlyerCard({ flyer, onTogglePublicado, onDelete, onVerFormatos }) {
             <ImageIcon className="w-8 h-8 opacity-30" />
           </div>
         )}
-        <div className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 p-0.5 shadow">
-          <img src={LOGO_URL} alt="Logo" className="w-full h-full rounded-full object-cover" />
-        </div>
-        {flyer.publicado && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            <Globe className="w-2.5 h-2.5" /> Web
+        {/* Overlay profesional */}
+        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"
+          style={{background:"linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
+          <div className="flex items-center gap-2 px-3 pt-3">
+            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400/70 shadow-lg" />
+            <div>
+              <p className="text-yellow-300 text-[9px] font-bold tracking-widest uppercase leading-none">Pérez & Funes</p>
+              <p className="text-white/80 text-[8px] tracking-wide leading-none mt-0.5">Estudio Jurídico</p>
+            </div>
+            {flyer.publicado && (
+              <div className="ml-auto bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Globe className="w-2.5 h-2.5" /> Web
+              </div>
+            )}
           </div>
-        )}
+          <div className="px-3 pb-3 space-y-0.5">
+            <p className="text-white font-bold text-[13px] leading-tight" style={{textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{flyer.titulo}</p>
+            <p className="text-yellow-300 text-[9px] font-medium tracking-wide uppercase">{flyer.servicio}</p>
+            <div className="w-8 h-px bg-yellow-400/60 my-1" />
+            {flyer.telefono && <p className="text-white/85 text-[8px]">📞 {flyer.telefono}</p>}
+            {flyer.domicilio && <p className="text-white/85 text-[8px]">📍 {flyer.domicilio}</p>}
+          </div>
+        </div>
       </div>
       <div className="p-4 space-y-3">
         <div>

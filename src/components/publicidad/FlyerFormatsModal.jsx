@@ -107,33 +107,23 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
       const llmResult = await base44.integrations.Core.InvokeLLM({
         model: "gemini_3_1_pro",
         prompt: `Sos un experto en diseño gráfico publicitario para estudios jurídicos argentinos.
-Generá un prompt detallado en inglés para crear una PIEZA GRÁFICA PUBLICITARIA COMPLETA para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
+Generá un prompt en inglés para crear un FONDO VISUAL de alta calidad para un flyer publicitario de estudio jurídico.
 
-La pieza debe tener TODO integrado como un diseño profesional terminado:
+Servicio: "${formData.servicio}"
+Estilo: ${estilo}
+Formato: ${layout}
 
-Datos a incluir en la pieza:
-- Nombre del estudio: "Pérez & Funes Estudio Jurídico"
-- Título destacado: "${formData.titulo}"
-- Servicio: "${formData.servicio}"
-- Mensaje: "${formData.descripcion || "Asesoramiento legal personalizado"}"
-- Teléfono: "${telefono}"
-- Domicilio: "${domicilio}, San Luis"
-- Estilo visual: ${estilo}
-- Formato: ${layout}
+El prompt debe describir SOLO elementos visuales sin texto:
+1. Fondo temático representativo para "${formData.servicio}" (objetos, arquitectura, simbolismos legales)
+2. Elementos jurídicos: balanza, togas, libros de derecho, columnas de tribunal, sellos
+3. Paleta: azul marino oscuro profundo, dorado, crema. Estilo premium elegante
+4. Sin personas reales. Sin texto, sin letras, sin palabras, sin números.
+5. Dejar zonas con degradado oscuro en la parte superior e inferior para que se pueda superponer texto
 
-El prompt debe describir una pieza gráfica completa que incluya:
-1. Fondo visual temático y elegante para "${formData.servicio}"
-2. Zona superior con el nombre "Pérez & Funes Estudio Jurídico" en tipografía serif dorada elegante
-3. Título central grande y destacado: "${formData.titulo}" en tipografía bold blanca o dorada
-4. Texto del servicio y mensaje en tipografía smaller debajo del título
-5. Zona inferior con teléfono y domicilio en tipografía clara sobre banda oscura semitransparente
-6. Paleta: azul marino oscuro (#1a2744), dorado (#c9a84c), blanco y crema. Estilo premium legal argentino
-7. Composición equilibrada, jerarquía visual clara, aspecto de flyer profesional impreso para formato ${layout}
-
-Respondé SOLO con el prompt en inglés, listo para usar en un generador de imágenes. Sin explicaciones adicionales.`,
+Respondé SOLO con el prompt en inglés. Sin explicaciones.`,
         response_json_schema: null,
       });
-      imagePrompt = typeof llmResult === "string" ? llmResult : String(llmResult);
+      imagePrompt = (typeof llmResult === "string" ? llmResult : String(llmResult)) + " NO text, NO letters, NO words, NO numbers, NO typography whatsoever. Pure visual background only.";
     } catch {
       imagePrompt = buildFallbackPrompt(formData, formatoId);
     }
@@ -238,20 +228,24 @@ Respondé ÚNICAMENTE con el texto corregido, sin comentarios ni explicaciones.`
                         <p className="text-xs">Sin imagen</p>
                       </div>
                     )}
-                    {/* Overlay de texto */}
-                    <div className="absolute inset-0 flex flex-col justify-between p-3 pointer-events-none">
-                      {/* Logo arriba */}
-                      <div className="flex items-center gap-1.5">
-                        <img src={LOGO_URL} alt="Logo" className="w-7 h-7 rounded-full object-cover bg-white/90 p-0.5 shadow" />
-                        <span className="text-white text-[9px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] leading-tight">
-                          Pérez & Funes<br/>Estudio Jurídico
-                        </span>
+                    {/* Overlay de texto profesional */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"
+                      style={{background: "linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
+                      {/* Header: logo + nombre estudio */}
+                      <div className="flex items-center gap-2 px-3 pt-3">
+                        <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover border-2 border-yellow-400/70 shadow-lg" />
+                        <div>
+                          <p className="text-yellow-300 text-[9px] font-bold tracking-widest uppercase leading-none">Pérez & Funes</p>
+                          <p className="text-white/80 text-[8px] tracking-wide leading-none mt-0.5">Estudio Jurídico</p>
+                        </div>
                       </div>
-                      {/* Título y datos abajo */}
-                      <div className="bg-black/55 rounded-lg px-2.5 py-2 space-y-0.5">
-                        <p className="text-white font-bold text-[11px] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{overlay.titulo}</p>
-                        <p className="text-yellow-300 text-[9px] leading-tight">{overlay.subtitulo}</p>
-                        <p className="text-white/80 text-[8px] leading-tight">📞 {overlay.telefono} · 📍 {overlay.domicilio}</p>
+                      {/* Footer: título + servicio + contacto */}
+                      <div className="px-3 pb-3 space-y-1">
+                        <p className="text-white font-bold text-[13px] leading-tight" style={{textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{overlay.titulo}</p>
+                        <p className="text-yellow-300 text-[9px] font-medium tracking-wide uppercase leading-tight">{overlay.subtitulo}</p>
+                        <div className="w-8 h-px bg-yellow-400/60 my-1" />
+                        <p className="text-white/85 text-[8px] leading-snug">📞 {overlay.telefono}</p>
+                        <p className="text-white/85 text-[8px] leading-snug">📍 {overlay.domicilio}, San Luis</p>
                       </div>
                     </div>
                   </div>
