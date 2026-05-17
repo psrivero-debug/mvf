@@ -107,28 +107,33 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
       const llmResult = await base44.integrations.Core.InvokeLLM({
         model: "gemini_3_1_pro",
         prompt: `Sos un experto en diseño gráfico publicitario para estudios jurídicos argentinos.
-Generá un prompt detallado en inglés para crear una imagen publicitaria de alta calidad para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
+Generá un prompt detallado en inglés para crear una PIEZA GRÁFICA PUBLICITARIA COMPLETA para la firma "Pérez & Funes Estudio Jurídico" de San Luis, Argentina.
 
-Datos del flyer:
-- Título: "${formData.titulo}"
+La pieza debe tener TODO integrado como un diseño profesional terminado:
+
+Datos a incluir en la pieza:
+- Nombre del estudio: "Pérez & Funes Estudio Jurídico"
+- Título destacado: "${formData.titulo}"
 - Servicio: "${formData.servicio}"
-- Mensaje clave: "${formData.descripcion || "Asesoramiento legal personalizado"}"
+- Mensaje: "${formData.descripcion || "Asesoramiento legal personalizado"}"
+- Teléfono: "${telefono}"
+- Domicilio: "${domicilio}, San Luis"
 - Estilo visual: ${estilo}
 - Formato: ${layout}
-- Teléfono: ${telefono}
-- Domicilio: ${domicilio}
 
-El prompt debe describir:
-1. Una imagen de fondo representativa y realista para "${formData.servicio}" (ej: para Derecho de Familia → familia en sala de estar, para Derecho Laboral → personas en oficina, para Inmobiliario → edificios o contratos, etc.)
-2. Composición visual y elementos gráficos del estudio jurídico (escudos, sellos, togas, libros, balanza de la justicia, arquitectura de tribunales, etc.)
-3. Iluminación, composición y paleta de colores acorde al estilo: colores oscuros elegantes, dorado y crema
-4. Que NO aparezcan personas reales, solo ambientaciones, objetos y simbolismos
-5. CRÍTICO: La imagen NO debe contener NINGÚN texto, letras, palabras, números ni tipografía de ningún tipo. Solo elementos visuales puros sin texto.
+El prompt debe describir una pieza gráfica completa que incluya:
+1. Fondo visual temático y elegante para "${formData.servicio}"
+2. Zona superior con el nombre "Pérez & Funes Estudio Jurídico" en tipografía serif dorada elegante
+3. Título central grande y destacado: "${formData.titulo}" en tipografía bold blanca o dorada
+4. Texto del servicio y mensaje en tipografía smaller debajo del título
+5. Zona inferior con teléfono y domicilio en tipografía clara sobre banda oscura semitransparente
+6. Paleta: azul marino oscuro (#1a2744), dorado (#c9a84c), blanco y crema. Estilo premium legal argentino
+7. Composición equilibrada, jerarquía visual clara, aspecto de flyer profesional impreso para formato ${layout}
 
 Respondé SOLO con el prompt en inglés, listo para usar en un generador de imágenes. Sin explicaciones adicionales.`,
         response_json_schema: null,
       });
-      imagePrompt = (typeof llmResult === "string" ? llmResult : String(llmResult)) + " NO text, NO words, NO letters, NO numbers, NO typography in the image.";
+      imagePrompt = typeof llmResult === "string" ? llmResult : String(llmResult);
     } catch {
       imagePrompt = buildFallbackPrompt(formData, formatoId);
     }
