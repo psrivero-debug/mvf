@@ -219,7 +219,7 @@ Respondé ÚNICAMENTE con el texto corregido, sin comentarios ni explicaciones.`
                   </div>
 
                   {/* Preview con overlay */}
-                  <div className={`${formato.aspecto} w-full max-w-[280px] mx-auto bg-muted rounded-xl overflow-hidden border border-border relative`}>
+                  <div className={`${formato.aspecto} w-full max-w-[280px] mx-auto bg-slate-800 rounded-xl overflow-hidden border border-border relative`}>
                     {imagenes[formato.id] ? (
                       <img src={imagenes[formato.id]} alt={formato.label} className="w-full h-full object-cover" />
                     ) : (
@@ -230,7 +230,7 @@ Respondé ÚNICAMENTE con el texto corregido, sin comentarios ni explicaciones.`
                     )}
                     {/* Overlay de texto profesional */}
                     <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"
-                      style={{background: "linear-gradient(to bottom, rgba(10,20,50,0.72) 0%, transparent 38%, transparent 55%, rgba(10,20,50,0.85) 100%)"}}>
+                      style={{background: "linear-gradient(to bottom, rgba(5,10,30,0.88) 0%, rgba(5,10,30,0.2) 40%, rgba(5,10,30,0.2) 55%, rgba(5,10,30,0.92) 100%)"}}>
                       {/* Header: logo + nombre estudio */}
                       <div className="flex items-center gap-2 px-3 pt-3">
                         <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover shadow-lg" style={{border:"2px solid rgba(250,204,21,0.7)"}} />
