@@ -106,21 +106,25 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
     try {
       const llmResult = await base44.integrations.Core.InvokeLLM({
         model: "gemini_3_1_pro",
-        prompt: `Sos un experto en diseño gráfico publicitario para estudios jurídicos argentinos.
-Generá un prompt en inglés para crear un FONDO VISUAL de alta calidad para un flyer publicitario de estudio jurídico.
+        prompt: `You are a world-class art director specializing in premium legal services advertising for Argentine law firms.
 
-Servicio: "${formData.servicio}"
-Estilo: ${estilo}
-Formato: ${layout}
+Create a highly detailed image generation prompt in English for a professional legal flyer background.
 
-El prompt debe describir SOLO elementos visuales sin texto:
-1. Fondo temático representativo para "${formData.servicio}" (objetos, arquitectura, simbolismos legales)
-2. Elementos jurídicos: balanza, togas, libros de derecho, columnas de tribunal, sellos
-3. Paleta: azul marino oscuro profundo, dorado, crema. Estilo premium elegante
-4. Sin personas reales. Sin texto, sin letras, sin palabras, sin números.
-5. Dejar zonas con degradado oscuro en la parte superior e inferior para que se pueda superponer texto
+Service being promoted: "${formData.servicio}"
+Visual style: ${estilo}
+Format/layout: ${layout}
 
-Respondé SOLO con el prompt en inglés. Sin explicaciones.`,
+Requirements for the prompt you generate:
+- Describe a cinematic, ultra-high-quality photographic or 3D render scene
+- Include specific thematic elements for "${formData.servicio}": relevant objects, architectural details, symbolic imagery
+- Mandatory elements: marble courthouse columns, leather-bound law books, golden scales of justice, official legal seals, mahogany desk, aged parchment textures
+- Color palette: deep navy blue (#0a1628), rich gold (#c9a84c), ivory white, dark burgundy accents — luxury law firm aesthetic
+- Lighting: dramatic side lighting, golden hour warm glow, subtle lens flare, soft bokeh background
+- Composition: leave the top 25% and bottom 30% with dark gradient areas (important for text overlay)
+- Style: Award-winning advertising photography, 8K resolution, ultra-detailed, dramatic mood
+- NO people, NO faces, NO text, NO letters, NO numbers, NO words, NO typography anywhere
+
+Respond ONLY with the image prompt in English. No explanations, no preamble.`,
         response_json_schema: null,
       });
       imagePrompt = (typeof llmResult === "string" ? llmResult : String(llmResult)) + " NO text, NO letters, NO words, NO numbers, NO typography whatsoever. Pure visual background only.";
