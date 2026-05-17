@@ -61,16 +61,15 @@ Datos del flyer:
 
 El prompt debe describir:
 1. Una imagen de fondo representativa y realista para "${form.servicio}" (ej: para Derecho de Familia → familia en sala de estar, para Derecho Laboral → personas en oficina, para Inmobiliario → edificios o contratos, etc.)
-2. Superposición de elementos gráficos del estudio jurídico
-3. Tipografía y texto a incluir
-4. Iluminación, composición y paleta de colores acorde al estilo
-5. Que NO aparezcan personas reales, sino ambientaciones, objetos o simbolismos
-6. CRÍTICO: Cualquier texto que aparezca en la imagen debe estar escrito con ortografía perfecta en español. El título "${form.titulo}" debe aparecer EXACTAMENTE como está escrito, sin cambiar ninguna letra.
+2. Composición visual y elementos gráficos del estudio jurídico (escudos, sellos, togas, libros, balanza de la justicia, arquitectura de tribunales, etc.)
+3. Iluminación, composición y paleta de colores acorde al estilo: colores oscuros elegantes, dorado y crema
+4. Que NO aparezcan personas reales, solo ambientaciones, objetos y simbolismos
+5. CRÍTICO: La imagen NO debe contener NINGÚN texto, letras, palabras, números ni tipografía de ningún tipo. Solo elementos visuales puros sin texto.
 
 Respondé SOLO con el prompt en inglés, listo para usar en un generador de imágenes. Sin explicaciones adicionales.`,
         response_json_schema: null,
       });
-      imagePrompt = typeof llmResult === "string" ? llmResult : String(llmResult);
+      imagePrompt = (typeof llmResult === "string" ? llmResult : String(llmResult)) + " NO text, NO words, NO letters, NO numbers, NO typography in the image.";
     } catch {
       imagePrompt = buildFallbackPrompt(form, "post");
     }
