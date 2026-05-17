@@ -59,6 +59,8 @@ function buildTextoPromo(flyer, formato) {
   return mensajes[formato] || mensajes["post"];
 }
 
+const LOGO_URL = "https://media.base44.com/images/public/69c424df37de29e9326cbefa/acd4af465_image.png";
+
 export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
   const [activeTab, setActiveTab] = useState("post");
   const [generando, setGenerando] = useState({});
@@ -76,6 +78,13 @@ export default function FlyerFormatsModal({ flyer, onClose, onSaveFormat }) {
   }));
   const [corrigiendo, setCorrigiendo] = useState({});
   const [copiado, setCopiado] = useState(null);
+  const [editandoOverlay, setEditandoOverlay] = useState(false);
+  const [overlay, setOverlay] = useState({
+    titulo: flyer.titulo || "",
+    subtitulo: flyer.servicio || "",
+    telefono: flyer.telefono || "2664 169108",
+    domicilio: flyer.domicilio || "25 de Mayo N° 477",
+  });
 
   const handleGenerarFormato = async (formatoId) => {
     setGenerando(prev => ({ ...prev, [formatoId]: true }));
@@ -199,23 +208,80 @@ Respondé ÚNICAMENTE con el texto corregido, sin comentarios ni explicaciones.`
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Imagen */}
+                {/* Imagen con overlay */}
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">Imagen</p>
-                  <div className={`${formato.aspecto} w-full max-w-[280px] mx-auto bg-muted rounded-xl overflow-hidden border border-border`}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Imagen</p>
+                    <Button
+                      size="sm"
+                      variant={editandoOverlay ? "default" : "outline"}
+                      className="gap-1.5 text-xs h-7"
+                      onClick={() => setEditandoOverlay(v => !v)}
+                    >
+                      {editandoOverlay ? <><Check className="w-3 h-3" /> Listo</> : <><SpellCheck className="w-3 h-3" /> Editar texto</>}
+                    </Button>
+                  </div>
+
+                  {/* Preview con overlay */}
+                  <div className={`${formato.aspecto} w-full max-w-[280px] mx-auto bg-muted rounded-xl overflow-hidden border border-border relative`}>
                     {imagenes[formato.id] ? (
-                      <img
-                        src={imagenes[formato.id]}
-                        alt={formato.label}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={imagenes[formato.id]} alt={formato.label} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
                         <formato.icon className="w-8 h-8 opacity-30" />
                         <p className="text-xs">Sin imagen</p>
                       </div>
                     )}
+                    {/* Overlay de texto */}
+                    <div className="absolute inset-0 flex flex-col justify-between p-3 pointer-events-none">
+                      {/* Logo arriba */}
+                      <div className="flex items-center gap-1.5">
+                        <img src={LOGO_URL} alt="Logo" className="w-7 h-7 rounded-full object-cover bg-white/90 p-0.5 shadow" />
+                        <span className="text-white text-[9px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] leading-tight">
+                          Pérez & Funes<br/>Estudio Jurídico
+                        </span>
+                      </div>
+                      {/* Título y datos abajo */}
+                      <div className="bg-black/55 rounded-lg px-2.5 py-2 space-y-0.5">
+                        <p className="text-white font-bold text-[11px] leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{overlay.titulo}</p>
+                        <p className="text-yellow-300 text-[9px] leading-tight">{overlay.subtitulo}</p>
+                        <p className="text-white/80 text-[8px] leading-tight">📞 {overlay.telefono} · 📍 {overlay.domicilio}</p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Campos editables del overlay */}
+                  {editandoOverlay && (
+                    <div className="space-y-2 border border-border rounded-lg p-3 bg-muted/30">
+                      <p className="text-xs font-medium text-muted-foreground">Editar texto del flyer</p>
+                      <div className="space-y-1.5">
+                        <input
+                          className="w-full text-xs border border-input rounded px-2 py-1 bg-background"
+                          placeholder="Título"
+                          value={overlay.titulo}
+                          onChange={e => setOverlay(o => ({ ...o, titulo: e.target.value }))}
+                        />
+                        <input
+                          className="w-full text-xs border border-input rounded px-2 py-1 bg-background"
+                          placeholder="Subtítulo / Servicio"
+                          value={overlay.subtitulo}
+                          onChange={e => setOverlay(o => ({ ...o, subtitulo: e.target.value }))}
+                        />
+                        <input
+                          className="w-full text-xs border border-input rounded px-2 py-1 bg-background"
+                          placeholder="Teléfono"
+                          value={overlay.telefono}
+                          onChange={e => setOverlay(o => ({ ...o, telefono: e.target.value }))}
+                        />
+                        <input
+                          className="w-full text-xs border border-input rounded px-2 py-1 bg-background"
+                          placeholder="Domicilio"
+                          value={overlay.domicilio}
+                          onChange={e => setOverlay(o => ({ ...o, domicilio: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-2 justify-center flex-wrap">
                     <Button
