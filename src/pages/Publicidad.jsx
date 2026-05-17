@@ -46,7 +46,7 @@ Service being promoted: ${form.servicio}
 ${form.descripcion ? `Key message: ${form.descripcion}` : ""}
 
 Design style: ${estilo}
-Include prominent space for: firm name "Pérez & Funes", phone number "${form.telefono || "+54 266 XXX-XXXX"}", address "${form.domicilio || "San Luis, Argentina"}"
+Include prominent space for: firm name "Pérez & Funes", phone number "${form.telefono || "2664 169108"}", address "${form.domicilio || "25 de Mayo N° 477"}"
 Layout: portrait orientation (4:5 ratio flyer), with scales of justice imagery or legal symbols, sophisticated background, clear text hierarchy
 The firm logo/seal should be prominent. Include "Consultá hoy" call to action.
 High quality, print-ready advertising flyer design. No real people, focus on design elements.`;
@@ -61,8 +61,8 @@ export default function Publicidad() {
     servicio: "",
     descripcion: "",
     estilo: "professional",
-    telefono: "+54 266 XXX-XXXX",
-    domicilio: "San Luis, Argentina",
+    telefono: "2664 169108",
+    domicilio: "25 de Mayo N° 477",
   });
 
   const { data: flyers = [], isLoading } = useQuery({
@@ -99,8 +99,8 @@ export default function Publicidad() {
       publicado: false,
       telefono: form.telefono,
       domicilio: form.domicilio,
-    });
-    setGenerating(false);
+      });
+      setGenerating(false);
     setDialogOpen(false);
     setForm({ titulo: "", servicio: "", descripcion: "", estilo: "professional", telefono: "+54 266 XXX-XXXX", domicilio: "San Luis, Argentina" });
   };
@@ -264,7 +264,7 @@ export default function Publicidad() {
               <div className="space-y-1.5">
                 <Label>Teléfono</Label>
                 <Input
-                  placeholder="+54 266 XXX-XXXX"
+                  placeholder="2664 169108"
                   value={form.telefono}
                   onChange={e => setForm({ ...form, telefono: e.target.value })}
                 />
@@ -272,7 +272,7 @@ export default function Publicidad() {
               <div className="space-y-1.5">
                 <Label>Domicilio</Label>
                 <Input
-                  placeholder="San Luis, Argentina"
+                  placeholder="25 de Mayo N° 477"
                   value={form.domicilio}
                   onChange={e => setForm({ ...form, domicilio: e.target.value })}
                 />
