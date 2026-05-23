@@ -4,7 +4,7 @@ import {
   MessageSquare, Scale, Menu, Shield, Calculator,
   ClipboardList, CheckCircle2, BookMarked, Receipt,
   FilePlus, ScanSearch, Archive, ChevronDown, ChevronRight,
-  FolderOpen, Sparkles, CalendarDays, Megaphone
+  FolderOpen, Sparkles, CalendarDays, Megaphone, Gavel
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,7 @@ const groups = [
       { path: "/interpretar", label: "Interpretar Documento", icon: ScanSearch },
       { path: "/consulta", label: "Consulta Legal", icon: Scale },
       { path: "/publicidad", label: "Publicidad", icon: Megaphone },
+      { path: "/concurso-quiebra", label: "Concurso y Quiebra", icon: Gavel },
     ],
   },
 ];

@@ -24,6 +24,7 @@ import InterpretarDocumento from './pages/InterpretarDocumento';
 import Legajos from './pages/Legajos';
 import Calendario from './pages/Calendario';
 import Publicidad from './pages/Publicidad';
+import ConcursoQuiebraPage from './pages/ConcursoQuiebraPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -63,6 +64,7 @@ const AuthenticatedApp = () => {
         <Route path="/legajos" element={<Legajos />} />
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/publicidad" element={<Publicidad />} />
+        <Route path="/concurso-quiebra" element={<ConcursoQuiebraPage />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />
