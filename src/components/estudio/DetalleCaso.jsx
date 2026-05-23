@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Bot, BookOpen, List, PenLine, MessageSquare, Gavel } from "lucide-react";
+import { ArrowLeft, FileText, Bot, BookOpen, List, PenLine, MessageSquare, Gavel, Wheat } from "lucide-react";
 import DocumentosList from "./DocumentosList";
 import AgenteIA from "./AgenteIA";
 import ExportarCaso from "./ExportarCaso";
@@ -11,6 +11,7 @@ import ModelosEscritos from "./ModelosEscritos";
 import PuntosCaso from "./PuntosCaso";
 import AsesorLegal from "./AsesorLegal";
 import ConcursoQuiebra from "./ConcursoQuiebra";
+import DerechoAgrario from "./DerechoAgrario";
 
 const tabs = [
   { id: "indice", label: "Índice", icon: List },
@@ -19,6 +20,7 @@ const tabs = [
   { id: "escritos", label: "Modelos de Escritos", icon: PenLine },
   { id: "asesor", label: "Asesor Legal", icon: MessageSquare },
   { id: "concurso", label: "Concurso y Quiebra", icon: Gavel },
+  { id: "agrario", label: "Derecho Agrario", icon: Wheat },
 ];
 
 export default function DetalleCaso({ caso, onBack }) {
@@ -95,6 +97,7 @@ export default function DetalleCaso({ caso, onBack }) {
       {activeTab === "escritos" && <ModelosEscritos caso={caso} documentos={documentos} />}
       {activeTab === "asesor" && <AsesorLegal caso={caso} />}
       {activeTab === "concurso" && <ConcursoQuiebra caso={caso} />}
+      {activeTab === "agrario" && <DerechoAgrario caso={caso} />}
     </div>
   );
 }
