@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Send, Loader2, Wheat, FileText, AlertCircle, Plus, Trash2,
-  ChevronDown, ChevronUp, MapPin, DollarSign, Calculator
+  ChevronDown, ChevronUp, MapPin, DollarSign, Calculator, RefreshCw
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -313,10 +313,21 @@ export default function DerechoAgrario({ caso }) {
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 h-[calc(100vh-280px)] min-h-[500px]">
       {/* Panel izquierdo */}
       <div className="xl:col-span-1 overflow-y-auto space-y-4 pr-1">
-        <div className="flex items-center gap-2 pb-2">
-          <Wheat className="w-5 h-5 text-green-700" />
-          <h3 className="font-semibold">Derecho Agrario</h3>
-          <Badge className="bg-green-100 text-green-800 text-xs">Especialista IA - San Luis</Badge>
+        <div className="flex items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <Wheat className="w-5 h-5 text-green-700" />
+            <h3 className="font-semibold">Derecho Agrario</h3>
+            <Badge className="bg-green-100 text-green-800 text-xs">Especialista IA - San Luis</Badge>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => { setDatosPredio({ departamento: "", tipo_explotacion: "" }); setHacienda([]); setModeloSeleccionado(""); }}
+            title="Limpiar datos"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
         </div>
 
         <DatosPredioPanel datos={datosPredio} onChange={setDatosPredio} />
