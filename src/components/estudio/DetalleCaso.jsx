@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Bot, BookOpen, List, PenLine, MessageSquare, Gavel, Wheat } from "lucide-react";
+import { ArrowLeft, FileText, Bot, BookOpen, List, PenLine, MessageSquare, Gavel, Wheat, RefreshCw } from "lucide-react";
 import DocumentosList from "./DocumentosList";
 import AgenteIA from "./AgenteIA";
 import ExportarCaso from "./ExportarCaso";
@@ -25,6 +25,7 @@ const tabs = [
 
 export default function DetalleCaso({ caso, onBack }) {
   const [activeTab, setActiveTab] = useState("indice");
+  const queryClient = useQueryClient();
 
   const { data: documentos = [] } = useQuery({
     queryKey: ["caso_documentos", caso.id],
@@ -35,6 +36,11 @@ export default function DetalleCaso({ caso, onBack }) {
     queryKey: ["caso_analisis", caso.id],
     queryFn: () => base44.entities.CasoAnalisis.filter({ caso_id: caso.id }, "-created_date"),
   });
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["caso_documentos", caso.id] });
+    queryClient.invalidateQueries({ queryKey: ["caso_analisis", caso.id] });
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -56,7 +62,10 @@ export default function DetalleCaso({ caso, onBack }) {
             {caso.partes && <span className="text-xs mt-0.5 block w-full">{caso.partes}</span>}
           </div>
         </div>
-        <div className="shrink-0 mt-1">
+        <div className="shrink-0 mt-1 flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={handleRefresh} title="Actualizar datos">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
           <ExportarCaso caso={caso} documentos={documentos} analisis={analisis} />
         </div>
       </div>
