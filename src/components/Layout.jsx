@@ -4,7 +4,7 @@ import {
   MessageSquare, Scale, Menu, Shield, Calculator,
   ClipboardList, CheckCircle2, BookMarked, Receipt,
   FilePlus, ScanSearch, Archive, ChevronDown, ChevronRight,
-  FolderOpen, Sparkles, CalendarDays, Megaphone, Gavel
+  FolderOpen, Sparkles, CalendarDays, Megaphone, Gavel, RefreshCw
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -195,6 +195,15 @@ export default function Layout() {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 mr-3"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="w-4 h-4" />
+            Actualizar
+          </Button>
           <p className="text-xs text-muted-foreground">
             {new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
