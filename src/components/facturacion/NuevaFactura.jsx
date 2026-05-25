@@ -52,7 +52,7 @@ export default function NuevaFactura({ config }) {
       alert("Primero configurá los datos del emisor en la pestaña Configuración.");
       return;
     }
-    if (!form.cliente_nombre) {
+    if (form.cliente_condicion_iva !== "consumidor_final" && !form.cliente_nombre) {
       alert("Ingresá el nombre del cliente.");
       return;
     }
@@ -168,11 +168,25 @@ export default function NuevaFactura({ config }) {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label>Nombre / Razón social *</Label>
-            <Input value={form.cliente_nombre} onChange={e => setForm(p => ({ ...p, cliente_nombre: e.target.value }))} placeholder="Nombre completo" />
+            <Input 
+              value={form.cliente_nombre} 
+              onChange={e => setForm(p => ({ ...p, cliente_nombre: e.target.value }))} 
+              placeholder="Nombre completo" 
+            />
+            {form.cliente_condicion_iva === "consumidor_final" && !form.cliente_nombre && (
+              <p className="text-xs text-amber-700">Para consumidor final, podés dejar vacío o usar "Consumidor Final"</p>
+            )}
           </div>
           <div className="space-y-1">
             <Label>DNI / CUIT</Label>
-            <Input value={form.cliente_cuit_dni} onChange={e => setForm(p => ({ ...p, cliente_cuit_dni: e.target.value }))} placeholder="Sin guiones" />
+            <Input 
+              value={form.cliente_cuit_dni} 
+              onChange={e => setForm(p => ({ ...p, cliente_cuit_dni: e.target.value }))} 
+              placeholder="Sin guiones" 
+            />
+            {form.cliente_condicion_iva === "consumidor_final" && !form.cliente_cuit_dni && (
+              <p className="text-xs text-amber-700">Opcional para consumidor final</p>
+            )}
           </div>
           <div className="space-y-1">
             <Label>Condición IVA</Label>
@@ -189,7 +203,11 @@ export default function NuevaFactura({ config }) {
           </div>
           <div className="space-y-1">
             <Label>Domicilio</Label>
-            <Input value={form.cliente_domicilio} onChange={e => setForm(p => ({ ...p, cliente_domicilio: e.target.value }))} placeholder="Opcional" />
+            <Input 
+              value={form.cliente_domicilio} 
+              onChange={e => setForm(p => ({ ...p, cliente_domicilio: e.target.value }))} 
+              placeholder="Opcional" 
+            />
           </div>
         </CardContent>
       </Card>
