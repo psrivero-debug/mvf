@@ -1,0 +1,78 @@
+{
+  "name": "ConfigFacturacion",
+  "type": "object",
+  "properties": {
+    "nombre_emisor": {
+      "type": "string",
+      "description": "Nombre completo o raz\u00f3n social"
+    },
+    "cuit": {
+      "type": "string",
+      "description": "CUIT del monotributista"
+    },
+    "categoria_monotributo": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K"
+      ],
+      "description": "Categor\u00eda de monotributo"
+    },
+    "domicilio_fiscal": {
+      "type": "string",
+      "description": "Domicilio fiscal"
+    },
+    "localidad": {
+      "type": "string",
+      "description": "Localidad"
+    },
+    "provincia": {
+      "type": "string",
+      "description": "Provincia"
+    },
+    "actividad": {
+      "type": "string",
+      "description": "Actividad principal"
+    },
+    "inicio_actividades": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio de actividades"
+    },
+    "punto_venta": {
+      "type": "string",
+      "description": "Punto de venta habilitado por AFIP",
+      "default": "0001"
+    },
+    "ultimo_numero": {
+      "type": "number",
+      "description": "\u00daltimo n\u00famero de factura emitida",
+      "default": 0
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL del logo para la factura"
+    },
+    "email_emisor": {
+      "type": "string",
+      "description": "Email de contacto"
+    },
+    "telefono_emisor": {
+      "type": "string",
+      "description": "Tel\u00e9fono de contacto"
+    }
+  },
+  "required": [
+    "nombre_emisor",
+    "cuit"
+  ]
+}
