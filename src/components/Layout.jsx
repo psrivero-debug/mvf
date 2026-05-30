@@ -44,6 +44,7 @@ const groups = [
     label: "Herramientas",
     icon: Sparkles,
     items: [
+      { path: "/escritor-judicial", label: "Escritor Judicial IA", icon: FileText },
       { path: "/redaccion", label: "Redacción IA", icon: MessageSquare },
       { path: "/interpretar", label: "Interpretar Documento", icon: ScanSearch },
       { path: "/consulta", label: "Consulta Legal", icon: Scale },
