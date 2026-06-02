@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Upload, FileText, Image, Merge, Download, Loader2,
-  CheckCircle2, Wand2, FileImage, FilePlus
+  CheckCircle2, Wand2, FileImage, FilePlus, X
 } from "lucide-react";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 
 // ─── Tool: Imagen a Word ─────────────────────────────────────────────────────
 function ImagenAWord() {
@@ -44,15 +45,7 @@ function ImagenAWord() {
     }
   };
 
-  const descargar = () => {
-    const blob = new Blob([result], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "documento_extraido.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const descargar = () => descargarDocx(result, "documento_extraido");
 
   return (
     <Card>
@@ -89,7 +82,7 @@ function ImagenAWord() {
           <div className="space-y-2">
             <Textarea value={result} onChange={e => setResult(e.target.value)} rows={8} className="font-mono text-sm" />
             <Button variant="outline" onClick={descargar} className="w-full gap-2">
-              <Download className="w-4 h-4" /> Descargar como .txt
+              <Download className="w-4 h-4" /> Descargar como Word (.docx)
             </Button>
           </div>
         )}
@@ -100,10 +93,33 @@ function ImagenAWord() {
   );
 }
 
-// ─── Tool: Fusionar Documentos ───────────────────────────────────────────────
+// ─── Helper: generar y descargar .docx ──────────────────────────────────────
+async function descargarDocx(texto, nombre = "documento_unificado") {
+  const lineas = texto.split("\n");
+  const parrafos = lineas.map(linea => {
+    const esTitle = linea.startsWith("# ");
+    const esH2 = linea.startsWith("## ");
+    const texto2 = linea.replace(/^#{1,3}\s*/, "").trim();
+    if (!texto2) return new Paragraph({});
+    if (esTitle) return new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: texto2, bold: true, size: 28 })] });
+    if (esH2) return new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: texto2, bold: true, size: 24 })] });
+    return new Paragraph({ children: [new TextRun({ text: texto2, size: 22 })] });
+  });
+
+  const doc = new Document({ sections: [{ properties: {}, children: parrafos }] });
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${nombre}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Tool: Fusionar / Combinar Imágenes + Texto → Word ──────────────────────
 function FusionarDocumentos() {
-  const [files, setFiles] = useState([]);
-  const [fileUrls, setFileUrls] = useState([]);
+  const [items, setItems] = useState([]); // { type: 'file'|'text', file?, name?, url?, text? }
+  const [textoLibre, setTextoLibre] = useState("");
   const [instruccion, setInstruccion] = useState("");
   const [resultado, setResultado] = useState("");
   const [loading, setLoading] = useState(false);
@@ -115,27 +131,43 @@ function FusionarDocumentos() {
     const selected = Array.from(e.target.files || []);
     if (!selected.length) return;
     setUploading(true);
-    setResultado("");
-    setDone(false);
     try {
       const uploads = await Promise.all(selected.map(f => base44.integrations.Core.UploadFile({ file: f })));
-      setFiles(prev => [...prev, ...selected]);
-      setFileUrls(prev => [...prev, ...uploads.map(u => u.file_url)]);
+      const nuevos = selected.map((f, i) => ({
+        type: "file",
+        name: f.name,
+        url: uploads[i].file_url,
+        isImage: f.type.startsWith("image/"),
+        preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : null,
+      }));
+      setItems(prev => [...prev, ...nuevos]);
     } finally {
       setUploading(false);
       e.target.value = "";
     }
   };
 
+  const agregarTexto = () => {
+    if (!textoLibre.trim()) return;
+    setItems(prev => [...prev, { type: "text", text: textoLibre.trim(), name: `Texto ${prev.filter(i => i.type === "text").length + 1}` }]);
+    setTextoLibre("");
+  };
+
+  const quitar = (i) => setItems(prev => prev.filter((_, idx) => idx !== i));
+
   const procesar = async () => {
-    if (fileUrls.length < 1) return;
+    if (items.length < 1) return;
     setLoading(true);
     setDone(false);
     try {
-      const prompt = `Tenés ${fileUrls.length} documento(s) adjunto(s). Tu tarea es: ${instruccion || "unificar y consolidar todos los documentos en uno solo, manteniendo la coherencia y el orden lógico del contenido. Eliminá repeticiones y organizá el texto de manera clara y profesional."} Devolvé el documento unificado completo, listo para usar.`;
+      const fileUrls = items.filter(i => i.type === "file").map(i => i.url);
+      const textosEmbebidos = items.filter(i => i.type === "text").map((i, idx) => `--- Bloque de texto ${idx + 1} ---\n${i.text}`).join("\n\n");
+
+      const prompt = `Tenés ${fileUrls.length} archivo(s) adjunto(s)${textosEmbebidos ? " y los siguientes bloques de texto adicional:\n\n" + textosEmbebidos : ""}.\n\nTu tarea es: ${instruccion || "extraé todo el contenido de las imágenes y documentos, luego unificá TODO en un único documento coherente, bien ordenado y sin repeticiones. Si hay imágenes, transcribí su texto. Organizá el resultado de manera profesional con títulos claros."}\n\nDevolvé el documento unificado completo usando # para títulos principales y ## para subtítulos.`;
+
       const res = await base44.integrations.Core.InvokeLLM({
         prompt,
-        file_urls: fileUrls,
+        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
         model: "claude_sonnet_4_6",
       });
       setResultado(res);
@@ -145,78 +177,94 @@ function FusionarDocumentos() {
     }
   };
 
-  const descargar = () => {
-    const blob = new Blob([resultado], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "documento_unificado.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const quitar = (i) => {
-    setFiles(prev => prev.filter((_, idx) => idx !== i));
-    setFileUrls(prev => prev.filter((_, idx) => idx !== i));
-  };
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Merge className="w-5 h-5 text-accent" />
-          Fusionar Documentos con IA
+          Combinar Fotos + Texto → Word
         </CardTitle>
-        <CardDescription>Cargá varios documentos y la IA los unifica en uno solo coherente.</CardDescription>
+        <CardDescription>Agregá fotos, documentos y bloques de texto. La IA los unifica y podés descargar el resultado como Word (.docx).</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+
+        {/* Zona de carga de archivos */}
         <div
           className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:bg-muted/40 transition-colors"
           onClick={() => inputRef.current?.click()}
         >
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <FilePlus className="w-8 h-8" />
-            <p className="text-sm">{uploading ? "Subiendo archivos..." : "Hacé clic para agregar documentos (PDF, DOCX, TXT, imágenes)"}</p>
+            <p className="text-sm font-medium">{uploading ? "Subiendo archivos..." : "Cargá fotos o documentos"}</p>
+            <p className="text-xs">JPG, PNG, PDF, TXT, DOCX — podés seleccionar varios a la vez</p>
           </div>
           <input ref={inputRef} type="file" accept=".pdf,.txt,.doc,.docx,image/*" multiple className="hidden" onChange={handleFiles} />
         </div>
 
-        {files.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {files.map((f, i) => (
-              <Badge key={i} variant="secondary" className="gap-1 cursor-pointer" onClick={() => quitar(i)}>
-                <FileText className="w-3 h-3" /> {f.name} ×
-              </Badge>
-            ))}
+        {/* Agregar texto libre */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium block">Agregar bloque de texto manual</label>
+          <Textarea
+            placeholder="Escribí o pegá texto aquí para incluirlo en el documento..."
+            value={textoLibre}
+            onChange={e => setTextoLibre(e.target.value)}
+            rows={3}
+          />
+          <Button variant="outline" size="sm" onClick={agregarTexto} disabled={!textoLibre.trim()} className="gap-2">
+            <FilePlus className="w-4 h-4" /> Agregar texto
+          </Button>
+        </div>
+
+        {/* Lista de items cargados */}
+        {items.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contenido a fusionar ({items.length})</p>
+            <div className="flex flex-wrap gap-2">
+              {items.map((item, i) => (
+                <div key={i} className="flex items-center gap-1.5 bg-secondary rounded-lg px-2 py-1 text-sm">
+                  {item.isImage && item.preview
+                    ? <img src={item.preview} className="w-6 h-6 rounded object-cover" alt="" />
+                    : item.type === "text"
+                      ? <FileText className="w-4 h-4 text-accent shrink-0" />
+                      : <FileText className="w-4 h-4 shrink-0" />
+                  }
+                  <span className="max-w-[120px] truncate">{item.name}</span>
+                  <button onClick={() => quitar(i)} className="text-muted-foreground hover:text-destructive ml-1">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Instrucción IA */}
         <div>
           <label className="text-sm font-medium block mb-1">Instrucción para la IA (opcional)</label>
           <Textarea
-            placeholder="Ej: Unificá estos contratos eliminando cláusulas duplicadas y ordenando por fecha..."
+            placeholder="Ej: Unificá el contrato de la foto con el texto adicional, respetando el orden cronológico..."
             value={instruccion}
             onChange={e => setInstruccion(e.target.value)}
-            rows={3}
+            rows={2}
           />
         </div>
 
-        <Button onClick={procesar} disabled={loading || fileUrls.length < 1} className="w-full gap-2">
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Procesando con IA...</> : <><Wand2 className="w-4 h-4" /> Fusionar documentos</>}
+        <Button onClick={procesar} disabled={loading || items.length < 1} className="w-full gap-2">
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Procesando con IA...</> : <><Wand2 className="w-4 h-4" /> Unificar todo</>}
         </Button>
 
-        {loading && <p className="text-xs text-muted-foreground text-center">Usando modelo avanzado — puede demorar unos segundos...</p>}
+        {loading && <p className="text-xs text-muted-foreground text-center">Procesando con modelo avanzado, puede demorar unos segundos...</p>}
 
         {resultado && (
           <div className="space-y-2">
             <Textarea value={resultado} onChange={e => setResultado(e.target.value)} rows={10} className="font-mono text-sm" />
-            <Button variant="outline" onClick={descargar} className="w-full gap-2">
-              <Download className="w-4 h-4" /> Descargar documento unificado
+            <Button onClick={() => descargarDocx(resultado)} className="w-full gap-2">
+              <Download className="w-4 h-4" /> Descargar como Word (.docx)
             </Button>
           </div>
         )}
 
-        {done && <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Documentos fusionados correctamente</p>}
+        {done && <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Documento generado correctamente</p>}
       </CardContent>
     </Card>
   );
@@ -263,15 +311,7 @@ function VerificarDocumento() {
     }
   };
 
-  const descargar = () => {
-    const blob = new Blob([`ANÁLISIS DEL DOCUMENTO: ${file?.name}\n\n${resultado}`], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `verificacion_${file?.name || "documento"}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const descargar = () => descargarDocx(`# ANÁLISIS DEL DOCUMENTO: ${file?.name}\n\n${resultado}`, `verificacion_${file?.name || "documento"}`);
 
   return (
     <Card>
@@ -320,7 +360,7 @@ function VerificarDocumento() {
           <div className="space-y-2">
             <Textarea value={resultado} onChange={e => setResultado(e.target.value)} rows={10} className="text-sm" />
             <Button variant="outline" onClick={descargar} className="w-full gap-2">
-              <Download className="w-4 h-4" /> Descargar análisis
+              <Download className="w-4 h-4" /> Descargar análisis (.docx)
             </Button>
           </div>
         )}
