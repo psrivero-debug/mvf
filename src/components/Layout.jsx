@@ -4,7 +4,7 @@ import {
   MessageSquare, Scale, Menu, Shield, Calculator,
   ClipboardList, CheckCircle2, BookMarked, Receipt,
   FilePlus, ScanSearch, Archive, ChevronDown, ChevronRight,
-  FolderOpen, Sparkles, CalendarDays, Megaphone, Gavel, RefreshCw, FileSpreadsheet
+  FolderOpen, Sparkles, CalendarDays, Megaphone, Gavel, RefreshCw, FileSpreadsheet, Wand2
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,7 @@ const groups = [
     label: "Herramientas",
     icon: Sparkles,
     items: [
+      { path: "/herramientas-especiales", label: "Herramientas Especiales", icon: Wand2 },
       { path: "/escritor-judicial", label: "Escritor Judicial IA", icon: FileText },
       { path: "/redaccion", label: "Redacción IA", icon: MessageSquare },
       { path: "/interpretar", label: "Interpretar Documento", icon: ScanSearch },
