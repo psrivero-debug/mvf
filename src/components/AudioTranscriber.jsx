@@ -72,10 +72,7 @@ export default function AudioTranscriber({ onTranscript }) {
     setIsProcessing(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Transcribí con exactitud el audio adjunto al español argentino. Devolvé solo el texto transcripto, sin comentarios ni explicaciones adicionales.`,
-        file_urls: [file_url],
-      });
+      const result = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
       onTranscript(result);
     } finally {
       setIsProcessing(false);

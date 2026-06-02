@@ -1,0 +1,77 @@
+{
+  "name": "Case",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo o car\u00e1tula de la causa"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "ID del cliente asociado"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente (para referencia r\u00e1pida)"
+    },
+    "case_number": {
+      "type": "string",
+      "description": "N\u00famero de expediente"
+    },
+    "jurisdiction": {
+      "type": "string",
+      "description": "Juzgado o jurisdicci\u00f3n"
+    },
+    "case_type": {
+      "type": "string",
+      "enum": [
+        "civil",
+        "penal",
+        "laboral",
+        "familia",
+        "comercial",
+        "administrativo",
+        "otro"
+      ],
+      "description": "Tipo de causa"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "activo",
+        "en_tramite",
+        "sentencia",
+        "apelacion",
+        "cerrado"
+      ],
+      "default": "activo"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada del caso"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "baja",
+        "media",
+        "alta",
+        "urgente"
+      ],
+      "default": "media"
+    },
+    "next_deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Pr\u00f3ximo vencimiento"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas internas"
+    }
+  },
+  "required": [
+    "title",
+    "client_id"
+  ]
+}

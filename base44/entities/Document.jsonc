@@ -1,0 +1,60 @@
+{
+  "name": "Document",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo del documento"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "escrito",
+        "carta_documento",
+        "contrato",
+        "demanda",
+        "contestacion",
+        "recurso",
+        "dictamen",
+        "nota",
+        "otro"
+      ],
+      "description": "Tipo de documento"
+    },
+    "content": {
+      "type": "string",
+      "description": "Contenido del documento"
+    },
+    "case_id": {
+      "type": "string",
+      "description": "Causa asociada (opcional)"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Cliente asociado (opcional)"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL del archivo adjunto"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "borrador",
+        "en_revision",
+        "finalizado"
+      ],
+      "default": "borrador"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Etiquetas del documento"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

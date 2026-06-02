@@ -1,0 +1,41 @@
+{
+  "name": "Abogado",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre completo del abogado/a"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo (Dr., Dra., etc.)"
+    },
+    "clave": {
+      "type": "string",
+      "description": "Clave interna del perfil"
+    },
+    "especialidad": {
+      "type": "string",
+      "description": "\u00c1rea de especializaci\u00f3n"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email de contacto"
+    },
+    "telefono": {
+      "type": "string",
+      "description": "Tel\u00e9fono"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "activo",
+        "inactivo"
+      ],
+      "default": "activo"
+    }
+  },
+  "required": [
+    "nombre"
+  ]
+}
