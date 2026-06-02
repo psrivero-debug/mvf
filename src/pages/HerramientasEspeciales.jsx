@@ -93,6 +93,48 @@ function ImagenAWord() {
   );
 }
 
+// ─── Helper: Word con imágenes incrustadas ───────────────────────────────────
+async function descargarDocxConImagenes(imagenes, docs, textosEmbebidos, instruccion) {
+  const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel } = await import("docx");
+
+  const children = [];
+
+  if (instruccion) {
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: instruccion, bold: true })] }));
+    children.push(new Paragraph({}));
+  }
+
+  // Insertar cada imagen
+  for (const img of imagenes) {
+    children.push(new Paragraph({ children: [new TextRun({ text: img.name, bold: true, size: 20 })] }));
+    // Fetch image as ArrayBuffer
+    const response = await fetch(img.url);
+    const buffer = await response.arrayBuffer();
+    const ext = img.name.split(".").pop().toLowerCase();
+    const type = ext === "png" ? "png" : ext === "gif" ? "gif" : "jpg";
+    children.push(new Paragraph({
+      children: [new ImageRun({ data: buffer, transformation: { width: 500, height: 350 }, type })]
+    }));
+    children.push(new Paragraph({}));
+  }
+
+  // Texto de documentos y bloques de texto
+  if (textosEmbebidos) {
+    textosEmbebidos.split("\n").forEach(linea => {
+      children.push(new Paragraph({ children: [new TextRun({ text: linea, size: 22 })] }));
+    });
+  }
+
+  const doc = new Document({ sections: [{ properties: {}, children }] });
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "documento_con_imagenes.docx";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Helper: generar y descargar .docx ──────────────────────────────────────
 async function descargarDocx(texto, nombre = "documento_unificado") {
   const lineas = texto.split("\n");
@@ -118,7 +160,7 @@ async function descargarDocx(texto, nombre = "documento_unificado") {
 
 // ─── Tool: Fusionar / Combinar Imágenes + Texto → Word ──────────────────────
 function FusionarDocumentos() {
-  const [items, setItems] = useState([]); // { type: 'file'|'text', file?, name?, url?, text? }
+  const [items, setItems] = useState([]); // { type: 'file'|'text', file?, name?, url?, text?, modoImagen? }
   const [textoLibre, setTextoLibre] = useState("");
   const [instruccion, setInstruccion] = useState("");
   const [resultado, setResultado] = useState("");
@@ -126,6 +168,8 @@ function FusionarDocumentos() {
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
   const inputRef = useRef();
+  // "texto" = IA extrae el texto | "imagen" = se incrusta la imagen en el Word
+  const [modoImagenes, setModoImagenes] = useState("texto");
 
   const handleFiles = async (e) => {
     const selected = Array.from(e.target.files || []);
@@ -160,9 +204,21 @@ function FusionarDocumentos() {
     setLoading(true);
     setDone(false);
     try {
-      const fileUrls = items.filter(i => i.type === "file").map(i => i.url);
+      const imagenes = items.filter(i => i.type === "file" && i.isImage);
+      const docs = items.filter(i => i.type === "file" && !i.isImage);
       const textosEmbebidos = items.filter(i => i.type === "text").map((i, idx) => `--- Bloque de texto ${idx + 1} ---\n${i.text}`).join("\n\n");
 
+      if (modoImagenes === "imagen") {
+        // Modo: incrustar imágenes en el Word con el texto adicional abajo
+        await descargarDocxConImagenes(imagenes, docs, textosEmbebidos, instruccion);
+        setResultado("✅ Documento Word generado con las imágenes incrustadas.");
+        setDone(true);
+        setLoading(false);
+        return;
+      }
+
+      // Modo: convertir imágenes a texto y unificar todo
+      const fileUrls = items.filter(i => i.type === "file").map(i => i.url);
       const prompt = `Tenés ${fileUrls.length} archivo(s) adjunto(s)${textosEmbebidos ? " y los siguientes bloques de texto adicional:\n\n" + textosEmbebidos : ""}.\n\nTu tarea es: ${instruccion || "extraé todo el contenido de las imágenes y documentos, luego unificá TODO en un único documento coherente, bien ordenado y sin repeticiones. Si hay imágenes, transcribí su texto. Organizá el resultado de manera profesional con títulos claros."}\n\nDevolvé el documento unificado completo usando # para títulos principales y ## para subtítulos.`;
 
       const res = await base44.integrations.Core.InvokeLLM({
@@ -238,9 +294,33 @@ function FusionarDocumentos() {
           </div>
         )}
 
+        {/* Modo imágenes */}
+        {items.some(i => i.isImage) && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium block">¿Cómo incluir las imágenes?</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setModoImagenes("imagen")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${modoImagenes === "imagen" ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-muted/40"}`}
+              >
+                🖼️ Insertar imágenes en el Word
+              </button>
+              <button
+                onClick={() => setModoImagenes("texto")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${modoImagenes === "texto" ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-muted/40"}`}
+              >
+                📝 Convertir imágenes a texto
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {modoImagenes === "imagen" ? "Las fotos se incrustarán una debajo de la otra en el documento." : "La IA extrae el texto de cada imagen y lo unifica en el documento."}
+            </p>
+          </div>
+        )}
+
         {/* Instrucción IA */}
         <div>
-          <label className="text-sm font-medium block mb-1">Instrucción para la IA (opcional)</label>
+          <label className="text-sm font-medium block mb-1">Instrucción para la IA {modoImagenes === "imagen" ? "(título del documento, opcional)" : "(opcional)"}</label>
           <Textarea
             placeholder="Ej: Unificá el contrato de la foto con el texto adicional, respetando el orden cronológico..."
             value={instruccion}
