@@ -145,10 +145,14 @@ function PanelNoticias() {
   const [loading, setLoading] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
 
+  const [errorNoticias, setErrorNoticias] = useState(false);
+
   const fetchNoticias = async () => {
     setLoading(true);
-    const resultado = await base44.integrations.Core.InvokeLLM({
-      prompt: `Eres un asistente jurídico especializado en derecho argentino, con foco en la provincia de San Luis.
+    setErrorNoticias(false);
+    try {
+      const resultado = await base44.integrations.Core.InvokeLLM({
+        prompt: `Eres un asistente jurídico especializado en derecho argentino, con foco en la provincia de San Luis.
       
 Busca y devuelve las 6 noticias legales y novedades jurídicas más relevantes y recientes de Argentina, priorizando aquellas que afecten a San Luis o a la práctica del derecho en el interior del país. Incluye:
 - Reformas legislativas o reglamentarias recientes
@@ -158,29 +162,33 @@ Busca y devuelve las 6 noticias legales y novedades jurídicas más relevantes y
 - Noticias relevantes de portales jurídicos como Infojus, La Ley, Eldial, MicroJuris, Ambito Jurídico
 
 Responde SOLO con el JSON, sin explicaciones ni texto adicional.`,
-      add_context_from_internet: true,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          noticias: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                titulo: { type: "string" },
-                resumen: { type: "string" },
-                fuente: { type: "string" },
-                categoria: { type: "string", enum: ["legislacion", "jurisprudencia", "provincial", "aranceles", "general"] },
-                fecha: { type: "string" }
+        add_context_from_internet: true,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            noticias: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  resumen: { type: "string" },
+                  fuente: { type: "string" },
+                  categoria: { type: "string", enum: ["legislacion", "jurisprudencia", "provincial", "aranceles", "general"] },
+                  fecha: { type: "string" }
+                }
               }
             }
           }
         }
-      }
-    });
-    setNoticias(resultado?.noticias || []);
-    setLastFetch(new Date());
-    setLoading(false);
+      });
+      setNoticias(resultado?.noticias || []);
+      setLastFetch(new Date());
+    } catch (err) {
+      setErrorNoticias(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -230,6 +238,11 @@ Responde SOLO con el JSON, sin explicaciones ni texto adicional.`,
             </div>
           ))}
           <p className="text-xs text-center text-muted-foreground mt-2">Buscando novedades jurídicas...</p>
+        </div>
+      ) : errorNoticias ? (
+        <div className="text-center py-6 space-y-1">
+          <p className="text-sm text-muted-foreground">No se pudieron cargar las novedades en este momento.</p>
+          <p className="text-xs text-muted-foreground/70">Es posible que se haya alcanzado el límite mensual de integraciones.</p>
         </div>
       ) : noticias.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6">No se pudieron cargar las noticias</p>
