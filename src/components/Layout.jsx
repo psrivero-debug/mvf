@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import ConsumoIA from "./ConsumoIA";
 
 const topItems = [
   { path: "/clientes", label: "Clientes", icon: Users },
@@ -210,6 +211,7 @@ export default function Layout() {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex-1" />
+          <ConsumoIA />
           <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border mr-3 ${
             aiProvider === "base44"
               ? "bg-blue-50 text-blue-700 border-blue-200"
