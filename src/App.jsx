@@ -28,6 +28,7 @@ import ConcursoQuiebraPage from './pages/ConcursoQuiebraPage';
 import Facturacion from './pages/Facturacion';
 import EscritorJudicial from './pages/EscritorJudicial';
 import HerramientasEspeciales from './pages/HerramientasEspeciales';
+import Consultores from './pages/Consultores';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -71,6 +72,7 @@ const AuthenticatedApp = () => {
         <Route path="/facturacion" element={<Facturacion />} />
         <Route path="/escritor-judicial" element={<EscritorJudicial />} />
         <Route path="/herramientas-especiales" element={<HerramientasEspeciales />} />
+        <Route path="/consultores" element={<Consultores />} />
       </Route>
         <Route path="/web" element={<Landing />} />
         <Route path="/ius" element={<Ius />} />
