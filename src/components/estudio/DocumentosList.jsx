@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Files, Mic } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const tipoDocLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -76,14 +77,19 @@ export default function DocumentosList({ caso, documentos }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({
-      ...prev,
-      file_url,
-      tipo_documento: file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : prev.tipo_documento,
-    }));
-    setUploading(false);
-    e.target.value = "";
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm(prev => ({
+        ...prev,
+        file_url,
+        tipo_documento: file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : prev.tipo_documento,
+      }));
+    } catch (err) {
+      toast({ title: "Error al subir el archivo", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, step: "" });
@@ -94,6 +100,7 @@ export default function DocumentosList({ caso, documentos }) {
     setUploading(true);
     setBulkProgress({ current: 0, total: files.length, step: "" });
 
+    try {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const nombreBase = file.name.replace(/\.[^/.]+$/, "");
@@ -148,9 +155,13 @@ export default function DocumentosList({ caso, documentos }) {
     }
 
     invalidate();
-    setUploading(false);
-    setBulkProgress({ current: 0, total: 0, step: "" });
-    e.target.value = "";
+    } catch (err) {
+      toast({ title: "Error al subir documentos", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      setBulkProgress({ current: 0, total: 0, step: "" });
+      e.target.value = "";
+    }
   };
 
   const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
@@ -173,65 +184,75 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
     const nombreBase = file.name.replace(/\.[^/.]+$/, "");
     setTranscribiendoAudio(true);
 
-    // 1. Subir el audio
-    const { file_url: audioUrl } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({ ...prev, file_url: audioUrl, tipo_documento: "testimonio" }));
+    try {
+      // 1. Subir el audio
+      const { file_url: audioUrl } = await base44.integrations.Core.UploadFile({ file });
+      setForm(prev => ({ ...prev, file_url: audioUrl, tipo_documento: "testimonio" }));
 
-    // 2. Transcribir con Whisper (TranscribeAudio)
-    const transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrl });
+      // 2. Transcribir con Whisper (TranscribeAudio)
+      const transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrl });
 
-    // 3. Guardar texto (si es muy largo, subir como .txt)
-    let textoGuardar = transcripcion;
-    if (transcripcion && transcripcion.length > 8000) {
-      const blob = new Blob([transcripcion], { type: "text/plain" });
-      const txtFile = new File([blob], `${nombreBase}.txt`, { type: "text/plain" });
-      const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-      textoGuardar = txt_url;
+      // 3. Guardar texto (si es muy largo, subir como .txt)
+      let textoGuardar = transcripcion;
+      if (transcripcion && transcripcion.length > 8000) {
+        const blob = new Blob([transcripcion], { type: "text/plain" });
+        const txtFile = new File([blob], `${nombreBase}.txt`, { type: "text/plain" });
+        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+        textoGuardar = txt_url;
+      }
+
+      setForm(prev => ({
+        ...prev,
+        contenido_texto: textoGuardar,
+        titulo: prev.titulo || nombreBase,
+      }));
+    } catch (err) {
+      toast({ title: "Error con el audio", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
+    } finally {
+      setTranscribiendoAudio(false);
+      e.target.value = "";
     }
-
-    setForm(prev => ({
-      ...prev,
-      contenido_texto: textoGuardar,
-      titulo: prev.titulo || nombreBase,
-    }));
-    setTranscribiendoAudio(false);
-    e.target.value = "";
   };
 
   const handleTranscribir = async () => {
     if (!form.file_url) return;
     setTranscribiendo(true);
-    const resultado = await base44.integrations.Core.InvokeLLM({
-      prompt: PROMPT_TRANSCRIPCION,
-      file_urls: [form.file_url],
-      model: "claude_sonnet_4_6",
-    });
+    try {
+      const resultado = await base44.integrations.Core.InvokeLLM({
+        prompt: PROMPT_TRANSCRIPCION,
+        file_urls: [form.file_url],
+        model: "claude_sonnet_4_6",
+      });
 
-    // Extraer título sugerido si lo hay
-    const lines = resultado.split("\n");
-    const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
-    let textoFinal = resultado;
-    let tituloSugerido = null;
-    if (tituloLine) {
-      tituloSugerido = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
-      textoFinal = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+      // Extraer título sugerido si lo hay
+      const lines = resultado.split("\n");
+      const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
+      let textoFinal = resultado;
+      let tituloSugerido = null;
+      if (tituloLine) {
+        tituloSugerido = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
+        textoFinal = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+      }
+
+      // Subir texto si es muy largo
+      let textoGuardar = textoFinal;
+      if (textoFinal && textoFinal.length > 8000) {
+        const blob = new Blob([textoFinal], { type: "text/plain" });
+        const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
+        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+        textoGuardar = txt_url;
+      }
+
+      setForm(prev => ({
+        ...prev,
+        contenido_texto: textoGuardar,
+        titulo: prev.titulo || tituloSugerido || prev.titulo,
+      }));
+    } catch (err) {
+      toast({ title: "Error al transcribir", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
+    } finally {
+      setTranscribiendo(false);
     }
-
-    // Subir texto si es muy largo
-    let textoGuardar = textoFinal;
-    if (textoFinal && textoFinal.length > 8000) {
-      const blob = new Blob([textoFinal], { type: "text/plain" });
-      const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
-      const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-      textoGuardar = txt_url;
-    }
-
-    setForm(prev => ({
-      ...prev,
-      contenido_texto: textoGuardar,
-      titulo: prev.titulo || tituloSugerido || prev.titulo,
-    }));
-    setTranscribiendo(false);
   };
 
   return (
