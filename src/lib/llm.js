@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { invokeWebLLM } from "./webllm";
 
 /**
  * Wrapper de InvokeLLM con fallback automático a Gemini (IA complementaria).
@@ -55,5 +56,24 @@ export async function invokeAll(params) {
     base44: base44Res.status === "fulfilled" ? base44Res.value : null,
     gemini: geminiRes.status === "fulfilled" ? geminiRes.value : null,
     deepseek: deepseekRes.status === "fulfilled" ? deepseekRes.value : null,
+  };
+}
+
+/**
+ * Ejecuta Base44, Gemini, DeepSeek y WebLLM (local) en paralelo.
+ * onLocalProgress recibe (progress, text) para mostrar el avance de descarga del modelo local.
+ */
+export async function invokeAllWithLocal(params, onLocalProgress) {
+  const [base44Res, geminiRes, deepseekRes, localRes] = await Promise.allSettled([
+    base44.integrations.Core.InvokeLLM(params),
+    base44.functions.invoke("geminiLLM", params).then(r => r.data),
+    base44.functions.invoke("deepseekLLM", params).then(r => r.data),
+    invokeWebLLM(params.prompt, onLocalProgress),
+  ]);
+  return {
+    base44: base44Res.status === "fulfilled" ? base44Res.value : null,
+    gemini: geminiRes.status === "fulfilled" ? geminiRes.value : null,
+    deepseek: deepseekRes.status === "fulfilled" ? deepseekRes.value : null,
+    local: localRes.status === "fulfilled" ? localRes.value : null,
   };
 }

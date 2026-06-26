@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { invokeLLM, invokeAll } from "@/lib/llm";
+import { invokeLLM, invokeAllWithLocal } from "@/lib/llm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ export default function DocumentDrafting() {
   const [docTitle, setDocTitle] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [compareDocs, setCompareDocs] = useState(null);
+  const [localProgress, setLocalProgress] = useState("");
   const queryClient = useQueryClient();
 
   const generateDocument = async () => {
@@ -58,8 +59,9 @@ INSTRUCCIONES:
 Redacta el documento completo:`;
 
     if (compareMode) {
-      const { base44: b44, gemini: gem, deepseek: ds } = await invokeAll({ prompt });
-      setCompareDocs({ base44: b44, gemini: gem, deepseek: ds });
+      setLocalProgress("Iniciando IA local...");
+      const { base44: b44, gemini: gem, deepseek: ds, local } = await invokeAllWithLocal({ prompt }, (p, text) => setLocalProgress(text || `${Math.round(p * 100)}%`));
+      setCompareDocs({ base44: b44, gemini: gem, deepseek: ds, local });
     } else {
       const result = await invokeLLM({ prompt });
       setGeneratedDoc(result);
@@ -159,7 +161,7 @@ Redacta el documento completo:`;
           <CardContent>
             {compareMode ? (
               compareDocs ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-semibold text-blue-600 flex items-center gap-1">
@@ -202,12 +204,29 @@ Redacta el documento completo:`;
                       <ReactMarkdown>{compareDocs.deepseek || "*Sin respuesta — sin saldo en la cuenta.*"}</ReactMarkdown>
                     </div>
                   </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-amber-600 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> Local (WebLLM)
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={() => { navigator.clipboard.writeText(compareDocs.local || ""); toast.success("Copiado"); }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    <div className="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg max-h-[55vh] overflow-y-auto">
+                      <ReactMarkdown>{compareDocs.local || "*Sin respuesta — WebGPU no disponible.*"}</ReactMarkdown>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Sparkles className="w-16 h-16 text-muted-foreground/20" />
-                  <p className="text-muted-foreground mt-4">Las respuestas de ambos motores aparecerán aquí</p>
+                  <p className="text-muted-foreground mt-4">Las respuestas de los motores aparecerán aquí</p>
                   <p className="text-xs text-muted-foreground mt-1">Completa el formulario y presiona "Generar"</p>
+                  {isGenerating && localProgress && (
+                    <p className="text-xs text-amber-600 mt-2">IA local: {localProgress}</p>
+                  )}
                 </div>
               )
             ) : !generatedDoc ? (
