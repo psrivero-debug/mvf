@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Files, Mic } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { prepareFileForUpload } from "@/lib/fileProcessing";
 
 const tipoDocLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -78,12 +79,43 @@ export default function DocumentosList({ caso, documentos }) {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const parts = await prepareFileForUpload(file);
+      const nombreBase = file.name.replace(/\.[^/.]+$/, "");
+      const tipo = file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : "otro";
+
+      // Subir todas las partes
+      const uploaded = [];
+      for (const part of parts) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: part });
+        uploaded.push(file_url);
+      }
+
+      // La primera parte va al formulario
       setForm(prev => ({
         ...prev,
-        file_url,
-        tipo_documento: file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : prev.tipo_documento,
+        file_url: uploaded[0],
+        tipo_documento: tipo,
+        titulo: prev.titulo || (parts.length > 1 ? `${nombreBase} - Parte 1` : prev.titulo),
       }));
+
+      // Si se dividió en varias partes, crear documentos para las restantes
+      if (uploaded.length > 1) {
+        for (let i = 1; i < uploaded.length; i++) {
+          await base44.entities.CasoDocumento.create({
+            caso_id: caso.id,
+            titulo: `${nombreBase} - Parte ${i + 1}`,
+            tipo_documento: tipo,
+            file_url: uploaded[i],
+            contenido_texto: "",
+            fuente: "",
+            fecha_documento: "",
+            notas: `Parte ${i + 1} de ${uploaded.length} (división automática)`,
+            orden: i,
+          });
+        }
+        invalidate();
+        toast({ title: "PDF dividido automáticamente", description: `Se dividió en ${uploaded.length} partes y se subieron todas.`, variant: "default" });
+      }
     } catch (err) {
       toast({ title: "Error al subir el archivo", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
     } finally {
@@ -98,63 +130,78 @@ export default function DocumentosList({ caso, documentos }) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploading(true);
-    setBulkProgress({ current: 0, total: files.length, step: "" });
+    setBulkProgress({ current: 0, total: files.length, step: "Preparando archivos..." });
 
     try {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const nombreBase = file.name.replace(/\.[^/.]+$/, "");
-      const tipo = file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : "otro";
+      // Preparar (comprimir/dividir) todos los archivos primero
+      const prepared = [];
+      for (const file of files) {
+        const parts = await prepareFileForUpload(file);
+        prepared.push({ original: file, parts });
+      }
+      const totalParts = prepared.reduce((acc, p) => acc + p.parts.length, 0);
+      setBulkProgress({ current: 0, total: totalParts, step: "" });
 
-      // 1. Subir archivo
-      setBulkProgress({ current: i + 1, total: files.length, step: `Subiendo ${file.name}...` });
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      let done = 0;
+      for (const { original, parts } of prepared) {
+        const nombreBase = original.name.replace(/\.[^/.]+$/, "");
+        const tipo = original.type.includes("image") ? "imagen" : original.type.includes("pdf") ? "pdf" : "otro";
 
-      // 2. Transcribir con IA
-      setBulkProgress({ current: i + 1, total: files.length, step: `Transcribiendo ${file.name}...` });
-      let contenido_texto = "";
-      let titulo = nombreBase;
-      try {
-        const resultado = await base44.integrations.Core.InvokeLLM({
-          prompt: PROMPT_TRANSCRIPCION,
-          file_urls: [file_url],
-          model: "claude_sonnet_4_6",
-        });
-        const lines = resultado.split("\n");
-        const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
-        if (tituloLine) {
-          titulo = tituloLine.replace("TÍTULO SUGERIDO:", "").trim() || nombreBase;
-          contenido_texto = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
-        } else {
-          contenido_texto = resultado;
+        for (let p = 0; p < parts.length; p++) {
+          done++;
+          const sufijo = parts.length > 1 ? ` (parte ${p + 1}/${parts.length})` : "";
+
+          // 1. Subir archivo
+          setBulkProgress({ current: done, total: totalParts, step: `Subiendo ${original.name}${sufijo}...` });
+          const { file_url } = await base44.integrations.Core.UploadFile({ file: parts[p] });
+
+          // 2. Transcribir con IA
+          setBulkProgress({ current: done, total: totalParts, step: `Transcribiendo ${original.name}${sufijo}...` });
+          let contenido_texto = "";
+          let titulo = parts.length > 1 ? `${nombreBase} - Parte ${p + 1}` : nombreBase;
+          try {
+            const resultado = await base44.integrations.Core.InvokeLLM({
+              prompt: PROMPT_TRANSCRIPCION,
+              file_urls: [file_url],
+              model: "claude_sonnet_4_6",
+            });
+            const lines = resultado.split("\n");
+            const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
+            if (tituloLine) {
+              const t = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
+              if (t) titulo = parts.length > 1 ? `${t} - Parte ${p + 1}` : t;
+              contenido_texto = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+            } else {
+              contenido_texto = resultado;
+            }
+          } catch {
+            contenido_texto = "";
+          }
+
+          // 3. Subir texto si es muy largo
+          if (contenido_texto && contenido_texto.length > 8000) {
+            const blob = new Blob([contenido_texto], { type: "text/plain" });
+            const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
+            const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+            contenido_texto = txt_url;
+          }
+
+          // 4. Guardar documento
+          await base44.entities.CasoDocumento.create({
+            caso_id: caso.id,
+            titulo,
+            tipo_documento: tipo,
+            file_url,
+            contenido_texto,
+            fuente: "",
+            fecha_documento: "",
+            notas: parts.length > 1 ? `Parte ${p + 1} de ${parts.length} (división automática)` : "",
+            orden: done - 1,
+          });
         }
-      } catch {
-        contenido_texto = "";
       }
 
-      // 3. Subir texto si es muy largo
-      if (contenido_texto && contenido_texto.length > 8000) {
-        const blob = new Blob([contenido_texto], { type: "text/plain" });
-        const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
-        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-        contenido_texto = txt_url;
-      }
-
-      // 4. Guardar documento
-      await base44.entities.CasoDocumento.create({
-        caso_id: caso.id,
-        titulo,
-        tipo_documento: tipo,
-        file_url,
-        contenido_texto,
-        fuente: "",
-        fecha_documento: "",
-        notas: "",
-        orden: i,
-      });
-    }
-
-    invalidate();
+      invalidate();
     } catch (err) {
       toast({ title: "Error al subir documentos", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
     } finally {
