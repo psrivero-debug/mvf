@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { invokeLLM, invokeBoth } from "@/lib/llm";
+import { invokeLLM, invokeAll } from "@/lib/llm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,11 +45,11 @@ ${conversationHistory}
 Responde la última consulta del usuario de forma precisa, profesional y fundamentada en derecho argentino. Usa formato Markdown para mejor legibilidad.`;
 
     if (compareMode) {
-      const { base44: b44, gemini: gem } = await invokeBoth({
+      const { base44: b44, gemini: gem, deepseek: ds } = await invokeAll({
         prompt,
         add_context_from_internet: true,
       });
-      setMessages(prev => [...prev, { role: "assistant", base44: b44, gemini: gem }]);
+      setMessages(prev => [...prev, { role: "assistant", base44: b44, gemini: gem, deepseek: ds }]);
     } else {
       const result = await invokeLLM({
         prompt,
@@ -136,7 +136,7 @@ Responde la última consulta del usuario de forma precisa, profesional y fundame
               {messages.map((msg, i) => {
                 if (msg.role === "assistant" && msg.base44 !== undefined) {
                   return (
-                    <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
                         <div className="text-xs font-semibold text-blue-600 mb-1 flex items-center gap-1">
                           <Sparkles className="w-3 h-3" /> Base44
@@ -154,6 +154,16 @@ Responde la última consulta del usuario de forma precisa, profesional y fundame
                         <div className="bg-muted rounded-2xl px-4 py-3">
                           <div className="prose prose-sm max-w-none">
                             <ReactMarkdown>{msg.gemini || "*Sin respuesta.*"}</ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-purple-600 mb-1 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> DeepSeek
+                        </div>
+                        <div className="bg-muted rounded-2xl px-4 py-3">
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown>{msg.deepseek || "*Sin respuesta — sin saldo en la cuenta.*"}</ReactMarkdown>
                           </div>
                         </div>
                       </div>

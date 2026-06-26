@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { invokeLLM, invokeBoth } from "@/lib/llm";
+import { invokeLLM, invokeAll } from "@/lib/llm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,8 +58,8 @@ INSTRUCCIONES:
 Redacta el documento completo:`;
 
     if (compareMode) {
-      const { base44: b44, gemini: gem } = await invokeBoth({ prompt });
-      setCompareDocs({ base44: b44, gemini: gem });
+      const { base44: b44, gemini: gem, deepseek: ds } = await invokeAll({ prompt });
+      setCompareDocs({ base44: b44, gemini: gem, deepseek: ds });
     } else {
       const result = await invokeLLM({ prompt });
       setGeneratedDoc(result);
@@ -159,7 +159,7 @@ Redacta el documento completo:`;
           <CardContent>
             {compareMode ? (
               compareDocs ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-semibold text-blue-600 flex items-center gap-1">
@@ -186,6 +186,20 @@ Redacta el documento completo:`;
                     </div>
                     <div className="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg max-h-[55vh] overflow-y-auto">
                       <ReactMarkdown>{compareDocs.gemini || "*Sin respuesta.*"}</ReactMarkdown>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-purple-600 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> DeepSeek
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={() => { navigator.clipboard.writeText(compareDocs.deepseek || ""); toast.success("Copiado"); }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    <div className="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg max-h-[55vh] overflow-y-auto">
+                      <ReactMarkdown>{compareDocs.deepseek || "*Sin respuesta — sin saldo en la cuenta.*"}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
