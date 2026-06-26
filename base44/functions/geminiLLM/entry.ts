@@ -4,7 +4,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 // No consume créditos de "integraciones" de Base44.
 // Soporta: texto, visión (imágenes vía file_urls), búsqueda web (grounding) y JSON estructurado.
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 Deno.serve(async (req) => {
   try {
