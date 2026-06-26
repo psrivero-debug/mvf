@@ -31,3 +31,29 @@ export async function invokeBoth(params) {
     gemini: geminiRes.status === "fulfilled" ? geminiRes.value : null,
   };
 }
+
+/**
+ * Llama directamente a DeepSeek (IA económica, no consume créditos de Base44).
+ * Soporta texto y JSON estructurado. Sin visión ni búsqueda web.
+ */
+export async function invokeDeepSeek(params) {
+  const res = await base44.functions.invoke("deepseekLLM", params);
+  return res.data;
+}
+
+/**
+ * Ejecuta Base44, Gemini y DeepSeek en paralelo y devuelve las tres respuestas
+ * para comparar diferencias de apreciación entre los motores.
+ */
+export async function invokeAll(params) {
+  const [base44Res, geminiRes, deepseekRes] = await Promise.allSettled([
+    base44.integrations.Core.InvokeLLM(params),
+    base44.functions.invoke("geminiLLM", params).then(r => r.data),
+    base44.functions.invoke("deepseekLLM", params).then(r => r.data),
+  ]);
+  return {
+    base44: base44Res.status === "fulfilled" ? base44Res.value : null,
+    gemini: geminiRes.status === "fulfilled" ? geminiRes.value : null,
+    deepseek: deepseekRes.status === "fulfilled" ? deepseekRes.value : null,
+  };
+}
