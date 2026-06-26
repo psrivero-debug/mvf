@@ -6,7 +6,7 @@ import {
   FilePlus, ScanSearch, Archive, ChevronDown, ChevronRight,
   FolderOpen, Sparkles, CalendarDays, Megaphone, Gavel, RefreshCw, FileSpreadsheet, Wand2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 const topItems = [
@@ -62,6 +62,13 @@ export default function Layout() {
   // Determine which group is active based on current path
   const activeGroupId = groups.find(g => g.items.some(i => i.path === location.pathname))?.id;
   const [openGroups, setOpenGroups] = useState(() => activeGroupId ? [activeGroupId] : []);
+
+  const [showFallbackBanner, setShowFallbackBanner] = useState(false);
+  useEffect(() => {
+    const handler = () => setShowFallbackBanner(true);
+    window.addEventListener("llm-fallback", handler);
+    return () => window.removeEventListener("llm-fallback", handler);
+  }, []);
 
   const toggleGroup = (id) => {
     setOpenGroups(prev =>
@@ -211,6 +218,15 @@ export default function Layout() {
             {new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </header>
+        {showFallbackBanner && (
+          <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs">
+            <span className="flex items-center gap-2 font-medium">
+              <Sparkles className="w-3.5 h-3.5" />
+              Integraciones agotadas — usando IA complementaria (Gemini) con las mismas indicaciones.
+            </span>
+            <button onClick={() => setShowFallbackBanner(false)} className="text-amber-600 hover:text-amber-900 font-bold text-sm leading-none">×</button>
+          </div>
+        )}
         <div className="flex-1 overflow-auto">
           <Outlet />
         </div>

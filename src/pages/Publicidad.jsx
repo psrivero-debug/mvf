@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { invokeLLM } from "@/lib/llm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,7 +30,7 @@ export default function Publicidad() {
 
     try {
       // Generar 3 opciones de diseños diferentes
-      const opciones = await base44.integrations.Core.InvokeLLM({
+      const opciones = await invokeLLM({
         model: "gemini_3_1_pro",
         prompt: `Sos un diseñador gráfico profesional especializado en marketing para bufetes de abogados argentinos.
 

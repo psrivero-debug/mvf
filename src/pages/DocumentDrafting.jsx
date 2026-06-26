@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { invokeLLM } from "@/lib/llm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ INSTRUCCIONES:
 
 Redacta el documento completo:`;
 
-    const result = await base44.integrations.Core.InvokeLLM({ prompt });
+    const result = await invokeLLM({ prompt });
     setGeneratedDoc(result);
     setIsGenerating(false);
   };

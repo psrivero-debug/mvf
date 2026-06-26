@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { invokeLLM } from "@/lib/llm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,7 +152,7 @@ function PanelNoticias() {
     setLoading(true);
     setErrorNoticias(false);
     try {
-      const resultado = await base44.integrations.Core.InvokeLLM({
+      const resultado = await invokeLLM({
         prompt: `Eres un asistente jurídico especializado en derecho argentino, con foco en la provincia de San Luis.
       
 Busca y devuelve las 6 noticias legales y novedades jurídicas más relevantes y recientes de Argentina, priorizando aquellas que afecten a San Luis o a la práctica del derecho en el interior del país. Incluye:

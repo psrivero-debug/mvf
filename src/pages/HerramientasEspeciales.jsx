@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { invokeLLM } from "@/lib/llm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,7 +35,7 @@ function ImagenAWord() {
     setDone(false);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file: image });
-      const texto = await base44.integrations.Core.InvokeLLM({
+      const texto = await invokeLLM({
         prompt: `Extraé y transcribí con exactitud todo el texto que aparece en esta imagen. Mantené el formato original lo más posible (títulos, párrafos, listas). Devolvé solo el texto, sin comentarios adicionales.`,
         file_urls: [file_url],
       });
@@ -221,7 +222,7 @@ function FusionarDocumentos() {
       const fileUrls = items.filter(i => i.type === "file").map(i => i.url);
       const prompt = `Tenés ${fileUrls.length} archivo(s) adjunto(s)${textosEmbebidos ? " y los siguientes bloques de texto adicional:\n\n" + textosEmbebidos : ""}.\n\nTu tarea es: ${instruccion || "extraé todo el contenido de las imágenes y documentos, luego unificá TODO en un único documento coherente, bien ordenado y sin repeticiones. Si hay imágenes, transcribí su texto. Organizá el resultado de manera profesional con títulos claros."}\n\nDevolvé el documento unificado completo usando # para títulos principales y ## para subtítulos.`;
 
-      const res = await base44.integrations.Core.InvokeLLM({
+      const res = await invokeLLM({
         prompt,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
         model: "claude_sonnet_4_6",
@@ -379,7 +380,7 @@ function VerificarDocumento() {
       const prompt = instruccion
         ? `Analizá este documento y ${instruccion}. Sé preciso y detallado en tu análisis.`
         : `Analizá este documento jurídico/legal con criterio profesional. Identificá: 1) Tipo de documento y partes involucradas. 2) Observaciones y puntos relevantes. 3) Posibles errores, omisiones o cláusulas problemáticas. 4) Recomendaciones. Sé preciso y usa lenguaje jurídico argentino.`;
-      const res = await base44.integrations.Core.InvokeLLM({
+      const res = await invokeLLM({
         prompt,
         file_urls: [fileUrl],
         model: "claude_sonnet_4_6",

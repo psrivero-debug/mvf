@@ -75,7 +75,9 @@ Deno.serve(async (req) => {
     if (tools.length > 0) payload.tools = tools;
 
     const apiVersion = "v1beta";
-    const endpoint = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
+    // Sanitizar modelo: si no es un modelo Gemini válido, usar el default
+    const validModel = (typeof model === "string" && model.startsWith("gemini-")) ? model : DEFAULT_MODEL;
+    const endpoint = `https://generativelanguage.googleapis.com/${apiVersion}/models/${validModel}:generateContent?key=${apiKey}`;
 
     const apiResp = await fetch(endpoint, {
       method: 'POST',

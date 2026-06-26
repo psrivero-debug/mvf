@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { invokeLLM } from "@/lib/llm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -144,7 +145,7 @@ export default function InterpretarDocumento() {
     setLoadingStep(`Analizando con Agente Jurídico: ${modo.label}...`);
     setResultado(null);
 
-    const respuesta = await base44.integrations.Core.InvokeLLM({
+    const respuesta = await invokeLLM({
       prompt: modo.prompt(textoExtraido),
       model: "claude_sonnet_4_6",
     });
