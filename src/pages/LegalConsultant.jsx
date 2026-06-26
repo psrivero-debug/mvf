@@ -1,17 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { invokeLLM } from "@/lib/llm";
+import { invokeLLM, invokeBoth } from "@/lib/llm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Scale, Send, Loader2, BookOpen, Trash2 } from "lucide-react";
+import { Scale, Send, Loader2, BookOpen, Trash2, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 export default function LegalConsultant() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -43,12 +44,19 @@ ${conversationHistory}
 
 Responde la última consulta del usuario de forma precisa, profesional y fundamentada en derecho argentino. Usa formato Markdown para mejor legibilidad.`;
 
-    const result = await invokeLLM({
-      prompt,
-      add_context_from_internet: true,
-    });
-    
-    setMessages(prev => [...prev, { role: "assistant", content: result }]);
+    if (compareMode) {
+      const { base44: b44, gemini: gem } = await invokeBoth({
+        prompt,
+        add_context_from_internet: true,
+      });
+      setMessages(prev => [...prev, { role: "assistant", base44: b44, gemini: gem }]);
+    } else {
+      const result = await invokeLLM({
+        prompt,
+        add_context_from_internet: true,
+      });
+      setMessages(prev => [...prev, { role: "assistant", content: result }]);
+    }
     setIsLoading(false);
   };
 
@@ -85,6 +93,15 @@ Responde la última consulta del usuario de forma precisa, profesional y fundame
                 <BookOpen className="w-3 h-3" />
                 Legislación AR
               </Badge>
+              <Button
+                variant={compareMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCompareMode(c => !c)}
+                className="text-xs gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                {compareMode ? "Comparando" : "Comparar IA"}
+              </Button>
               {messages.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={() => setMessages([])} className="text-xs gap-1">
                   <Trash2 className="w-3 h-3" /> Limpiar
@@ -116,23 +133,51 @@ Responde la última consulta del usuario de forma precisa, profesional y fundame
             </div>
           ) : (
             <>
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    msg.role === "user" 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted"
-                  }`}>
-                    {msg.role === "user" ? (
-                      <p className="text-sm">{msg.content}</p>
-                    ) : (
-                      <div className="prose prose-sm max-w-none">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+              {messages.map((msg, i) => {
+                if (msg.role === "assistant" && msg.base44 !== undefined) {
+                  return (
+                    <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-xs font-semibold text-blue-600 mb-1 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Base44
+                        </div>
+                        <div className="bg-muted rounded-2xl px-4 py-3">
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown>{msg.base44 || "*Sin respuesta — créditos agotados.*"}</ReactMarkdown>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                      <div>
+                        <div className="text-xs font-semibold text-emerald-600 mb-1 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Gemini
+                        </div>
+                        <div className="bg-muted rounded-2xl px-4 py-3">
+                          <div className="prose prose-sm max-w-none">
+                            <ReactMarkdown>{msg.gemini || "*Sin respuesta.*"}</ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      msg.role === "user" 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted"
+                    }`}>
+                      {msg.role === "user" ? (
+                        <p className="text-sm">{msg.content}</p>
+                      ) : (
+                        <div className="prose prose-sm max-w-none">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-2xl px-4 py-3">
