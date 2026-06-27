@@ -210,9 +210,18 @@ export default function IndiceCaso({ documentos }) {
       if (doc.contenido_texto && doc.contenido_texto.trim().length >= 30) {
         setResumenes(prev => {
           if (prev[doc.id]) return prev;
+          // Si ya tiene resumen guardado en la BD, usarlo sin regenerar
+          if (doc.resumen) {
+            return { ...prev, [doc.id]: { loading: false, text: doc.resumen } };
+          }
+          // Solo generar si no existe resumen guardado
           const next = { ...prev, [doc.id]: { loading: true, text: null } };
           generarResumen(doc).then(text => {
             setResumenes(p => ({ ...p, [doc.id]: { loading: false, text } }));
+            // Persistir el resumen para no regenerarlo la próxima vez
+            if (text) {
+              base44.entities.CasoDocumento.update(doc.id, { resumen: text }).catch(() => {});
+            }
           });
           return next;
         });
@@ -222,7 +231,7 @@ export default function IndiceCaso({ documentos }) {
 
   const handleGenerarTodos = async () => {
     const sinResumen = documentos.filter(
-      d => d.contenido_texto && d.contenido_texto.trim().length >= 30 && !resumenes[d.id]?.text
+      d => d.contenido_texto && d.contenido_texto.trim().length >= 30 && !d.resumen && !resumenes[d.id]?.text
     );
     if (!sinResumen.length) return;
     setGenerandoTodos(true);
@@ -230,6 +239,9 @@ export default function IndiceCaso({ documentos }) {
       setResumenes(prev => ({ ...prev, [doc.id]: { loading: true, text: null } }));
       const text = await generarResumen(doc);
       setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+      if (text) {
+        await base44.entities.CasoDocumento.update(doc.id, { resumen: text }).catch(() => {});
+      }
     }
     setGenerandoTodos(false);
   };
@@ -252,10 +264,13 @@ export default function IndiceCaso({ documentos }) {
       if (resultado.fecha && !doc.fecha_documento) updates.fecha_documento = resultado.fecha;
       await base44.entities.CasoDocumento.update(doc.id, updates);
       queryClient.invalidateQueries({ queryKey: ["caso_documentos", doc.caso_id] });
-      // Generar resumen inmediatamente con el texto nuevo
+      // Generar resumen inmediatamente con el texto nuevo y persistirlo
       const docActualizado = { ...doc, contenido_texto: resultado.contenido };
       const text = await generarResumen(docActualizado);
-      if (text) setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+      if (text) {
+        setResumenes(prev => ({ ...prev, [doc.id]: { loading: false, text } }));
+        await base44.entities.CasoDocumento.update(doc.id, { resumen: text }).catch(() => {});
+      }
     }
     setDigitalizando(prev => ({ ...prev, [doc.id]: false }));
   };

@@ -48,6 +48,10 @@
     "notas": {
       "type": "string",
       "description": "Notas sobre el documento"
+    },
+    "resumen": {
+      "type": "string",
+      "description": "Resumen generado por IA (persistido para no regenerar)"
     }
   },
   "required": [
