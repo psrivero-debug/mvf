@@ -359,7 +359,7 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
       )}
 
       {/* Conversión a blanco y negro de PDF grande */}
-      {conversionProgress && !bulkProgress.total && (
+      {conversionProgress && (
         <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm flex items-center gap-3">
           <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
           <div className="flex-1 min-w-0">
