@@ -516,7 +516,15 @@ export default function AgenteIA({ caso, documentos }) {
       ? docsConTexto.map(d => `--- DOCUMENTO: "${d.titulo}" (Fuente: ${d.fuente || "No especificada"}, Fecha: ${d.fecha_documento || "No especificada"}) ---\n${d.contenido_resuelto}`).join("\n\n")
       : "(No hay documentos con texto disponibles en el caso)";
 
+    const agentesOmitidos = [];
     for (const agenteId of agentesIds) {
+      // Verificar si ya existe un análisis idéntico (misma consulta + mismo agente)
+      const yaExiste = analisis.some(a => a.consulta === consultaTexto && a.agente === agenteId);
+      if (yaExiste) {
+        agentesOmitidos.push(agenteId);
+        continue;
+      }
+
       setConsultandoIdx(agenteId);
       const agenteConfig = agentes.find(a => a.id === agenteId);
       const promptFinal = agenteId === "analista" 
@@ -541,6 +549,16 @@ export default function AgenteIA({ caso, documentos }) {
         documentos_referenciados: docsSeleccionados,
       });
       queryClient.invalidateQueries({ queryKey: ["caso_analisis", caso.id] });
+    }
+
+    if (agentesOmitidos.length > 0) {
+      const labels = agentesOmitidos.map(id => agentes.find(a => a.id === id)?.label).filter(Boolean).join(", ");
+      import("@/components/ui/use-toast").then(({ toast }) => {
+        toast({
+          title: "Análisis ya guardado",
+          description: `Se omitió regenerar: ${labels}. Ya existen en el historial.`,
+        });
+      });
     }
 
     setConsultandoIdx(null);
