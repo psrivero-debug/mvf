@@ -1,10 +1,8 @@
 import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString();
+// Usar CDN para el worker: evita problemas de import/bundle del worker ESM en Vite.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 // 9 MB — bajo el límite de 10 MB de procesamiento de InvokeLLM (y también del de 50 MB de UploadFile).
 // Así cada parte dividida/comprimida puede transcribirse con IA sin rechazo.
@@ -17,10 +15,30 @@ const MAX_FILE_SIZE = 9 * 1024 * 1024;
  * Devuelve un nuevo File .pdf. Si falla, lanza para que el llamador haga fallback.
  */
 export async function convertPdfToGrayscale(file, onProgress) {
+  // Probar progresivamente con menor escala y calidad hasta quedar bajo el límite.
+  const intentos = [
+    { scale: 1.5, quality: 0.6 },
+    { scale: 1.2, quality: 0.45 },
+    { scale: 1.0, quality: 0.35 },
+  ];
+  let ultimoResultado = null;
+  for (const { scale, quality } of intentos) {
+    try {
+      const resultado = await _convertPdfToGrayscale(file, scale, quality, onProgress);
+      if (resultado.size <= MAX_FILE_SIZE) return resultado;
+      ultimoResultado = resultado; // seguir probando con menor calidad
+    } catch (e) {
+      // si falla un intento, probar el siguiente
+    }
+  }
+  if (ultimoResultado) return ultimoResultado; // al menos algo más chico
+  throw new Error("No se pudo reducir el PDF");
+}
+
+async function _convertPdfToGrayscale(file, scale, quality, onProgress) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const newPdf = await PDFDocument.create();
-  const scale = 1.5; // ~108 DPI, suficiente para OCR de documentos jurídicos
   const numPages = pdf.numPages;
 
   for (let i = 1; i <= numPages; i++) {
@@ -44,7 +62,7 @@ export async function convertPdfToGrayscale(file, onProgress) {
     ctx.putImageData(imageData, 0, 0);
 
     const jpegBlob = await new Promise((res) =>
-      canvas.toBlob(res, "image/jpeg", 0.6)
+      canvas.toBlob(res, "image/jpeg", quality)
     );
     const jpgBytes = await jpegBlob.arrayBuffer();
     const img = await newPdf.embedJpg(jpgBytes);
