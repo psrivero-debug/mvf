@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
+import { invokeLLM } from "@/lib/llm";
 
 const tipoLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -38,13 +39,15 @@ Devolvé ÚNICAMENTE la transcripción completa (con título y fecha al final), 
 
 async function digitalizarDocumento(doc) {
   if (!doc.file_url) return null;
-  const resultado = await base44.integrations.Core.InvokeLLM({
+  // invokeLLM usa Base44 (Claude) y, si el archivo supera el límite de
+  // procesamiento de 10 MB, cae automáticamente a geminiLLM (hasta ~20 MB).
+  const resultado = await invokeLLM({
     prompt: PROMPT_TRANSCRIPCION,
     file_urls: [doc.file_url],
     model: "claude_sonnet_4_6",
   });
 
-  const lines = resultado.split("\n");
+  const lines = String(resultado).split("\n");
   const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
   const fechaLine = lines.findLast(l => l.trim().startsWith("FECHA SUGERIDA:"));
 
