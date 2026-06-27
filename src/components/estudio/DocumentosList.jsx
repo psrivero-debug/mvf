@@ -43,6 +43,7 @@ export default function DocumentosList({ caso, documentos }) {
   const [uploading, setUploading] = useState(false);
   const [transcribiendo, setTranscribiendo] = useState(false);
   const [transcribiendoAudio, setTranscribiendoAudio] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState(null);
   const fileInputRef = useRef(null);
   const audioInputRef = useRef(null);
   const bulkInputRef = useRef(null);
@@ -79,8 +80,11 @@ export default function DocumentosList({ caso, documentos }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setConversionProgress(null);
     try {
-      const parts = await prepareFileForUpload(file);
+      const parts = await prepareFileForUpload(file, (current, total) =>
+        setConversionProgress({ current, total })
+      );
       const nombreBase = file.name.replace(/\.[^/.]+$/, "");
       const tipo = file.type.includes("image") ? "imagen" : file.type.includes("pdf") ? "pdf" : "otro";
 
@@ -121,6 +125,7 @@ export default function DocumentosList({ caso, documentos }) {
       toast({ title: "Error al subir el archivo", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
     } finally {
       setUploading(false);
+      setConversionProgress(null);
       e.target.value = "";
     }
   };
@@ -137,7 +142,9 @@ export default function DocumentosList({ caso, documentos }) {
       // Preparar (comprimir/dividir) todos los archivos primero
       const prepared = [];
       for (const file of files) {
-        const parts = await prepareFileForUpload(file);
+        const parts = await prepareFileForUpload(file, (current, total) =>
+          setConversionProgress({ current, total, name: file.name })
+        );
         prepared.push({ original: file, parts });
       }
       const totalParts = prepared.reduce((acc, p) => acc + p.parts.length, 0);
@@ -210,6 +217,7 @@ export default function DocumentosList({ caso, documentos }) {
     } finally {
       setUploading(false);
       setBulkProgress({ current: 0, total: 0, step: "" });
+      setConversionProgress(null);
       e.target.value = "";
     }
   };
@@ -350,6 +358,21 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
         </div>
       )}
 
+      {/* Conversión a blanco y negro de PDF grande */}
+      {conversionProgress && !bulkProgress.total && (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm flex items-center gap-3">
+          <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-amber-900 text-xs">
+              Convirtiendo PDF a blanco y negro para reducir tamaño
+            </p>
+            <p className="text-xs text-amber-700 truncate">
+              {conversionProgress.name ? `${conversionProgress.name} — ` : ""}página {conversionProgress.current} de {conversionProgress.total}
+            </p>
+          </div>
+        </div>
+      )}
+
       {documentos.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed rounded-xl">
           <FileText className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
@@ -462,6 +485,11 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
                 )}
                 <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileUpload} />
               </div>
+              {conversionProgress && (
+                <p className="text-xs text-primary animate-pulse">
+                  Convirtiendo PDF a blanco y negro para reducir tamaño... página {conversionProgress.current} de {conversionProgress.total}
+                </p>
+              )}
               {form.file_url && (
                 <p className="text-xs text-green-600">✓ Archivo cargado</p>
               )}

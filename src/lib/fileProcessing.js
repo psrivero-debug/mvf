@@ -1,8 +1,61 @@
 import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 // 9 MB — bajo el límite de 10 MB de procesamiento de InvokeLLM (y también del de 50 MB de UploadFile).
 // Así cada parte dividida/comprimida puede transcribirse con IA sin rechazo.
 const MAX_FILE_SIZE = 9 * 1024 * 1024;
+
+/**
+ * Convierte un PDF a blanco y negro (escala de grises) rasterizando cada página
+ * como JPEG comprimido y reensamblando un nuevo PDF. Reduce drásticamente el
+ * tamaño de PDFs escaneados a color, permitiendo cargarlos para análisis con IA.
+ * Devuelve un nuevo File .pdf. Si falla, lanza para que el llamador haga fallback.
+ */
+export async function convertPdfToGrayscale(file, onProgress) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const newPdf = await PDFDocument.create();
+  const scale = 1.5; // ~108 DPI, suficiente para OCR de documentos jurídicos
+  const numPages = pdf.numPages;
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // Convertir a escala de grises (luminancia)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imageData.data;
+    for (let j = 0; j < d.length; j += 4) {
+      const gray = d[j] * 0.299 + d[j + 1] * 0.587 + d[j + 2] * 0.114;
+      d[j] = d[j + 1] = d[j + 2] = gray;
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    const jpegBlob = await new Promise((res) =>
+      canvas.toBlob(res, "image/jpeg", 0.6)
+    );
+    const jpgBytes = await jpegBlob.arrayBuffer();
+    const img = await newPdf.embedJpg(jpgBytes);
+    const newPage = newPdf.addPage([img.width, img.height]);
+    newPage.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+
+    if (onProgress) onProgress(i, numPages);
+  }
+
+  const pdfBytes = await newPdf.save();
+  const nombreBase = file.name.replace(/\.pdf$/i, "");
+  return new File([pdfBytes], `${nombreBase}_byn.pdf`, { type: "application/pdf" });
+}
 
 /**
  * Comprime una imagen redimensionándola y re-comprimiéndola como JPEG.
@@ -87,9 +140,18 @@ export async function splitPdf(file) {
  * Prepara un archivo para subida: comprime imágenes y divide PDFs grandes.
  * Devuelve siempre un array de Files listos para subir.
  */
-export async function prepareFileForUpload(file) {
+export async function prepareFileForUpload(file, onProgress) {
   if (file.type === "application/pdf") {
-    return splitPdf(file);
+    let pdf = file;
+    // Si el PDF supera el límite, convertirlo a blanco y negro para achicarlo
+    if (file.size > MAX_FILE_SIZE) {
+      try {
+        pdf = await convertPdfToGrayscale(file, onProgress);
+      } catch (e) {
+        pdf = file; // si la conversión falla, usar el original y dividirlo
+      }
+    }
+    return splitPdf(pdf);
   }
   if (file.type.startsWith("image/")) {
     return [await compressImage(file)];
