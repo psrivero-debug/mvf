@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Fi
 import { toast } from "@/components/ui/use-toast";
 import { prepareFileForUpload } from "@/lib/fileProcessing";
 import { invokeLLM } from "@/lib/llm";
+import { subscribeBulkUpload, startBulkUpload, getBulkUploadState, PROMPT_TRANSCRIPCION } from "@/lib/bulkUploadManager";
 
 const tipoDocLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -44,10 +45,13 @@ export default function DocumentosList({ caso, documentos }) {
   const [transcribiendo, setTranscribiendo] = useState(false);
   const [transcribiendoAudio, setTranscribiendoAudio] = useState(false);
   const [conversionProgress, setConversionProgress] = useState(null);
+  const [bulkUploadState, setBulkUploadState] = useState(getBulkUploadState());
   const fileInputRef = useRef(null);
   const audioInputRef = useRef(null);
   const bulkInputRef = useRef(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => subscribeBulkUpload(setBulkUploadState), []);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["caso_documentos", caso.id] });
 
@@ -130,113 +134,12 @@ export default function DocumentosList({ caso, documentos }) {
     }
   };
 
-  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, step: "" });
-
-  const handleBulkUpload = async (e) => {
+  const handleBulkUpload = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setUploading(true);
-    setBulkProgress({ current: 0, total: files.length, step: "Preparando archivos..." });
-
-    try {
-      // Preparar (comprimir/dividir) todos los archivos primero
-      const prepared = [];
-      for (let fi = 0; fi < files.length; fi++) {
-        setBulkProgress({ current: fi, total: files.length, step: `Preparando ${files[fi].name}...` });
-        const parts = await prepareFileForUpload(files[fi], (current, total) =>
-          setConversionProgress({ current, total, name: files[fi].name })
-        );
-        prepared.push({ original: files[fi], parts });
-        setConversionProgress(null);
-      }
-      const totalParts = prepared.reduce((acc, p) => acc + p.parts.length, 0);
-      setBulkProgress({ current: 0, total: totalParts, step: "Iniciando subida..." });
-
-      let done = 0;
-      for (const { original, parts } of prepared) {
-        const nombreBase = original.name.replace(/\.[^/.]+$/, "");
-        const tipo = original.type.includes("image") ? "imagen" : original.type.includes("pdf") ? "pdf" : "otro";
-
-        for (let p = 0; p < parts.length; p++) {
-          done++;
-          const sufijo = parts.length > 1 ? ` (parte ${p + 1}/${parts.length})` : "";
-
-          // 1. Subir archivo
-          setBulkProgress({ current: done, total: totalParts, step: `Subiendo ${original.name}${sufijo}...` });
-          const { file_url } = await base44.integrations.Core.UploadFile({ file: parts[p] });
-
-          // 2. Transcribir con IA
-          setBulkProgress({ current: done, total: totalParts, step: `Transcribiendo ${original.name}${sufijo}...` });
-          let contenido_texto = "";
-          let titulo = parts.length > 1 ? `${nombreBase} - Parte ${p + 1}` : nombreBase;
-          try {
-            // invokeLLM usa Base44 (Claude) y, si el archivo supera el límite de
-            // procesamiento de 10 MB, cae automáticamente a geminiLLM (hasta ~20 MB).
-            const resultado = await invokeLLM({
-              prompt: PROMPT_TRANSCRIPCION,
-              file_urls: [file_url],
-              model: "claude_sonnet_4_6",
-            });
-            const lines = String(resultado).split("\n");
-            const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
-            if (tituloLine) {
-              const t = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
-              if (t) titulo = parts.length > 1 ? `${t} - Parte ${p + 1}` : t;
-              contenido_texto = lines.filter(l => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
-            } else {
-              contenido_texto = resultado;
-            }
-          } catch {
-            contenido_texto = "";
-          }
-
-          // 3. Subir texto si es muy largo
-          if (contenido_texto && contenido_texto.length > 8000) {
-            const blob = new Blob([contenido_texto], { type: "text/plain" });
-            const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
-            const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-            contenido_texto = txt_url;
-          }
-
-          // 4. Guardar documento
-          await base44.entities.CasoDocumento.create({
-            caso_id: caso.id,
-            titulo,
-            tipo_documento: tipo,
-            file_url,
-            contenido_texto,
-            fuente: "",
-            fecha_documento: "",
-            notas: parts.length > 1 ? `Parte ${p + 1} de ${parts.length} (división automática)` : "",
-            orden: done - 1,
-          });
-        }
-      }
-
-      invalidate();
-    } catch (err) {
-      toast({ title: "Error al subir documentos", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
-    } finally {
-      setUploading(false);
-      setBulkProgress({ current: 0, total: 0, step: "" });
-      setConversionProgress(null);
-      e.target.value = "";
-    }
+    startBulkUpload(files, caso.id);
+    e.target.value = "";
   };
-
-  const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
-Tu tarea es transcribir el contenido de esta imagen con la máxima fidelidad posible.
-
-INSTRUCCIONES ESTRICTAS:
-- Transcribí CADA PALABRA visible, incluyendo encabezados, sellos, firmas (indicalas como "[FIRMA]"), foliatura, numeraciones y fechas.
-- Mantené la estructura original: párrafos, sangrías, listas numeradas, bullet points.
-- Si hay texto manuscrito, transcribilo entre [MANUSCRITO: ...].
-- Si hay sellos o membretes, transcribilos entre [SELLO: ...].
-- Respetá mayúsculas, puntuación y acentos tal como aparecen.
-- NO resumas, NO omitas nada. Transcribí TODO el texto visible de principio a fin.
-- Al final, en una línea separada, escribí: TÍTULO SUGERIDO: [un título descriptivo conciso del documento, máximo 8 palabras].
-
-Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al final), sin comentarios ni aclaraciones previas.`;
 
   const handleAudioUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -327,10 +230,10 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
             size="sm"
             className="gap-2"
             onClick={() => bulkInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || bulkUploadState.uploading}
           >
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Files className="w-4 h-4" />}
-            {uploading ? `${bulkProgress.current}/${bulkProgress.total}` : "Subir y transcribir varios"}
+            {bulkUploadState.uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Files className="w-4 h-4" />}
+            {bulkUploadState.uploading ? `${bulkUploadState.bulkProgress.current}/${bulkUploadState.bulkProgress.total}` : "Subir y transcribir varios"}
           </Button>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-2">
             <Plus className="w-4 h-4" /> Agregar Documento
@@ -346,22 +249,22 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
         />
       </div>
 
-      {/* Progreso de carga masiva */}
-      {uploading && bulkProgress.total > 0 && (
+      {/* Progreso de carga masiva (continúa aunque navegues a otra sección) */}
+      {bulkUploadState.uploading && bulkUploadState.bulkProgress.total > 0 && (
         <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm flex items-center gap-3">
           <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-primary text-xs">Procesando {bulkProgress.current} de {bulkProgress.total} archivos</p>
-            <p className="text-xs text-muted-foreground truncate">{bulkProgress.step}</p>
+            <p className="font-medium text-primary text-xs">Procesando {bulkUploadState.bulkProgress.current} de {bulkUploadState.bulkProgress.total} archivos</p>
+            <p className="text-xs text-muted-foreground truncate">{bulkUploadState.bulkProgress.step}</p>
           </div>
           <div className="shrink-0 text-xs text-muted-foreground">
-            {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
+            {Math.round((bulkUploadState.bulkProgress.current / bulkUploadState.bulkProgress.total) * 100)}%
           </div>
         </div>
       )}
 
       {/* Conversión a blanco y negro de PDF grande */}
-      {conversionProgress && (
+      {(conversionProgress || bulkUploadState.conversionProgress) && (
         <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm flex items-center gap-3">
           <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -369,7 +272,7 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
               Convirtiendo PDF a blanco y negro para reducir tamaño
             </p>
             <p className="text-xs text-amber-700 truncate">
-              {conversionProgress.name ? `${conversionProgress.name} — ` : ""}página {conversionProgress.current} de {conversionProgress.total}
+              {(conversionProgress || bulkUploadState.conversionProgress).name ? `${(conversionProgress || bulkUploadState.conversionProgress).name} — ` : ""}página {(conversionProgress || bulkUploadState.conversionProgress).current} de {(conversionProgress || bulkUploadState.conversionProgress).total}
             </p>
           </div>
         </div>
