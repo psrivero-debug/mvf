@@ -15,23 +15,23 @@ const MAX_FILE_SIZE = 9 * 1024 * 1024;
  * Devuelve un nuevo File .pdf. Si falla, lanza para que el llamador haga fallback.
  */
 export async function convertPdfToGrayscale(file, onProgress) {
-  // Probar progresivamente con menor escala y calidad hasta quedar bajo el límite.
+  // Empezar con la compresión más agresiva: 1 sola pasada rápida.
+  // Solo si no alcanza, intentar una segunda más extrema.
   const intentos = [
-    { scale: 1.5, quality: 0.6 },
-    { scale: 1.2, quality: 0.45 },
-    { scale: 1.0, quality: 0.35 },
+    { scale: 1.0, quality: 0.4 },
+    { scale: 0.75, quality: 0.3 },
   ];
   let ultimoResultado = null;
   for (const { scale, quality } of intentos) {
     try {
       const resultado = await _convertPdfToGrayscale(file, scale, quality, onProgress);
       if (resultado.size <= MAX_FILE_SIZE) return resultado;
-      ultimoResultado = resultado; // seguir probando con menor calidad
+      ultimoResultado = resultado;
     } catch (e) {
       // si falla un intento, probar el siguiente
     }
   }
-  if (ultimoResultado) return ultimoResultado; // al menos algo más chico
+  if (ultimoResultado) return ultimoResultado;
   throw new Error("No se pudo reducir el PDF");
 }
 
@@ -47,22 +47,21 @@ async function _convertPdfToGrayscale(file, scale, quality, onProgress) {
     const canvas = document.createElement("canvas");
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const ctx = canvas.getContext("2d");
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvasContext: ctx, viewport }).promise;
 
-    // Convertir a escala de grises (luminancia)
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const d = imageData.data;
-    for (let j = 0; j < d.length; j += 4) {
-      const gray = d[j] * 0.299 + d[j + 1] * 0.587 + d[j + 2] * 0.114;
-      d[j] = d[j + 1] = d[j + 2] = gray;
-    }
-    ctx.putImageData(imageData, 0, 0);
+    // Grayscale vía filter del canvas (mucho más rápido que el bucle pixel-por-pixel)
+    const offCanvas = document.createElement("canvas");
+    offCanvas.width = canvas.width;
+    offCanvas.height = canvas.height;
+    const offCtx = offCanvas.getContext("2d");
+    offCtx.filter = "grayscale(1)";
+    offCtx.drawImage(canvas, 0, 0);
 
     const jpegBlob = await new Promise((res) =>
-      canvas.toBlob(res, "image/jpeg", quality)
+      offCanvas.toBlob(res, "image/jpeg", quality)
     );
     const jpgBytes = await jpegBlob.arrayBuffer();
     const img = await newPdf.embedJpg(jpgBytes);
