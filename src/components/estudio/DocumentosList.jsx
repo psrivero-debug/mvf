@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Files, Mic } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { prepareFileForUpload } from "@/lib/fileProcessing";
+import { invokeLLM } from "@/lib/llm";
 
 const tipoDocLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -160,12 +161,14 @@ export default function DocumentosList({ caso, documentos }) {
           let contenido_texto = "";
           let titulo = parts.length > 1 ? `${nombreBase} - Parte ${p + 1}` : nombreBase;
           try {
-            const resultado = await base44.integrations.Core.InvokeLLM({
+            // invokeLLM usa Base44 (Claude) y, si el archivo supera el límite de
+            // procesamiento de 10 MB, cae automáticamente a geminiLLM (hasta ~20 MB).
+            const resultado = await invokeLLM({
               prompt: PROMPT_TRANSCRIPCION,
               file_urls: [file_url],
               model: "claude_sonnet_4_6",
             });
-            const lines = resultado.split("\n");
+            const lines = String(resultado).split("\n");
             const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
             if (tituloLine) {
               const t = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
@@ -265,14 +268,16 @@ Devolvé ÚNICAMENTE la transcripción completa (con el título sugerido al fina
     if (!form.file_url) return;
     setTranscribiendo(true);
     try {
-      const resultado = await base44.integrations.Core.InvokeLLM({
+      // invokeLLM usa Base44 (Claude) y, si el archivo supera el límite de
+      // procesamiento de 10 MB, cae automáticamente a geminiLLM (hasta ~20 MB).
+      const resultado = await invokeLLM({
         prompt: PROMPT_TRANSCRIPCION,
         file_urls: [form.file_url],
         model: "claude_sonnet_4_6",
       });
 
       // Extraer título sugerido si lo hay
-      const lines = resultado.split("\n");
+      const lines = String(resultado).split("\n");
       const tituloLine = lines.findLast(l => l.trim().startsWith("TÍTULO SUGERIDO:"));
       let textoFinal = resultado;
       let tituloSugerido = null;
