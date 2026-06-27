@@ -1,8 +1,8 @@
 import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 // 9 MB — bajo el límite de 10 MB de procesamiento de InvokeLLM (y también del de 50 MB de UploadFile).
 // Así cada parte dividida/comprimida puede transcribirse con IA sin rechazo.
