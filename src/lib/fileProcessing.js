@@ -1,21 +1,23 @@
 import { PDFDocument } from "pdf-lib";
 
-// 45 MB — margen seguro bajo el límite de 50 MB de UploadFile
-const MAX_FILE_SIZE = 45 * 1024 * 1024;
+// 9 MB — bajo el límite de 10 MB de procesamiento de InvokeLLM (y también del de 50 MB de UploadFile).
+// Así cada parte dividida/comprimida puede transcribirse con IA sin rechazo.
+const MAX_FILE_SIZE = 9 * 1024 * 1024;
 
 /**
  * Comprime una imagen redimensionándola y re-comprimiéndola como JPEG.
- * Si el resultado no es más chico, devuelve el archivo original.
+ * Si el resultado sigue superando MAX_FILE_SIZE, baja calidad y dimensiones
+ * progresivamente hasta que entre. Si nunca mejora, devuelve el original.
  */
 export async function compressImage(file, maxDimension = 2000, quality = 0.8) {
   if (!file.type.startsWith("image/")) return file;
 
-  return new Promise((resolve) => {
+  const doCompress = (dim, qual) => new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       let { width, height } = img;
-      if (width > maxDimension || height > maxDimension) {
-        const ratio = Math.min(maxDimension / width, maxDimension / height);
+      if (width > dim || height > dim) {
+        const ratio = Math.min(dim / width, dim / height);
         width = Math.round(width * ratio);
         height = Math.round(height * ratio);
       }
@@ -26,22 +28,26 @@ export async function compressImage(file, maxDimension = 2000, quality = 0.8) {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (!blob || blob.size >= file.size) {
-            resolve(file);
-            return;
-          }
-          const nombreBase = file.name.replace(/\.[^/.]+$/, "");
-          resolve(new File([blob], `${nombreBase}.jpg`, { type: "image/jpeg" }));
-        },
-        "image/jpeg",
-        quality
-      );
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", qual);
     };
-    img.onerror = () => resolve(file);
+    img.onerror = () => resolve(null);
     img.src = URL.createObjectURL(file);
   });
+
+  let dim = maxDimension;
+  let qual = quality;
+  let blob = await doCompress(dim, qual);
+
+  // Bajar calidad y dimensiones hasta quedar bajo el límite (mínimo quality 0.3)
+  while (blob && blob.size > MAX_FILE_SIZE && qual > 0.3) {
+    qual = Math.max(0.3, qual - 0.15);
+    dim = Math.round(dim * 0.8);
+    blob = await doCompress(dim, qual);
+  }
+
+  if (!blob || blob.size >= file.size) return file;
+  const nombreBase = file.name.replace(/\.[^/.]+$/, "");
+  return new File([blob], `${nombreBase}.jpg`, { type: "image/jpeg" });
 }
 
 /**
