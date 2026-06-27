@@ -14,9 +14,9 @@ export async function invokeLLM(params) {
     const res = await base44.integrations.Core.InvokeLLM(params);
     // InvokeLLM no lanza error cuando un archivo supera los 10 MB: devuelve un
     // texto de rechazo. Lo detectamos y forzamos el fallback a geminiLLM.
+    const resStr = typeof res === "string" ? res : JSON.stringify(res);
     const esRechazoTamano =
-      typeof res === "string" &&
-      /no puedo procesar|supera el límite|comprimí (el pdf|el archivo|el)|dividí el pdf|dividí el archivo/i.test(res);
+      /no puedo procesar|supera el límite|supera el limite|comprimí|comprimi|dividí el|dividi el|too large|file too/i.test(resStr);
     if (esRechazoTamano && params.file_urls && params.file_urls.length > 0) {
       throw new Error("file_too_large_refusal");
     }

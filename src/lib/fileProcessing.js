@@ -2,7 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
 
 // Usar CDN para el worker: evita problemas de import/bundle del worker ESM en Vite.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 // 9 MB — bajo el límite de 10 MB de procesamiento de InvokeLLM (y también del de 50 MB de UploadFile).
 // Así cada parte dividida/comprimida puede transcribirse con IA sin rechazo.
@@ -162,16 +162,26 @@ export async function splitPdf(file) {
  */
 export async function prepareFileForUpload(file, onProgress) {
   if (file.type === "application/pdf") {
-    let pdf = file;
-    // Si el PDF supera el límite, convertirlo a blanco y negro para achicarlo
-    if (file.size > MAX_FILE_SIZE) {
-      try {
-        pdf = await convertPdfToGrayscale(file, onProgress);
-      } catch (e) {
-        pdf = file; // si la conversión falla, usar el original y dividirlo
+    // 1. Dividir primero (no necesita worker, es rápido con pdf-lib)
+    let parts = await splitPdf(file);
+    // 2. Si alguna parte sigue superando el límite, convertirla a blanco y negro
+    const resultado = [];
+    for (const part of parts) {
+      if (part.size > MAX_FILE_SIZE) {
+        try {
+          const convertido = await convertPdfToGrayscale(part, onProgress);
+          // Volver a dividir si la conversión dejó la parte todavía grande
+          const subPartes = await splitPdf(convertido);
+          resultado.push(...subPartes);
+        } catch (e) {
+          // Si la conversión falla, igual subimos la parte (geminiLLM maneja hasta ~20 MB)
+          resultado.push(part);
+        }
+      } else {
+        resultado.push(part);
       }
     }
-    return splitPdf(pdf);
+    return resultado;
   }
   if (file.type.startsWith("image/")) {
     return [await compressImage(file)];
