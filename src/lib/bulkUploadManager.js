@@ -71,6 +71,7 @@ export async function startBulkUpload(files, casoId) {
 
     // 2. Subir y transcribir cada parte
     let done = 0;
+    let errores = 0;
     for (const { original, parts } of prepared) {
       const nombreBase = original.name.replace(/\.[^/.]+$/, "");
       const tipo = original.type.includes("image") ? "imagen" : original.type.includes("pdf") ? "pdf" : "otro";
@@ -79,58 +80,63 @@ export async function startBulkUpload(files, casoId) {
         done++;
         const sufijo = parts.length > 1 ? ` (parte ${p + 1}/${parts.length})` : "";
 
-        // Subir archivo
-        setState({ bulkProgress: { current: done, total: totalParts, step: `Subiendo ${original.name}${sufijo}...` } });
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: parts[p] });
-
-        // Transcribir con IA
-        setState({ bulkProgress: { current: done, total: totalParts, step: `Transcribiendo ${original.name}${sufijo}...` } });
-        let contenido_texto = "";
-        let titulo = parts.length > 1 ? `${nombreBase} - Parte ${p + 1}` : nombreBase;
         try {
-          const resultado = await invokeLLM({
-            prompt: PROMPT_TRANSCRIPCION,
-            file_urls: [file_url],
-            model: "claude_sonnet_4_6",
-          });
-          const lines = String(resultado).split("\n");
-          const tituloLine = lines.findLast((l) => l.trim().startsWith("TÍTULO SUGERIDO:"));
-          if (tituloLine) {
-            const t = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
-            if (t) titulo = parts.length > 1 ? `${t} - Parte ${p + 1}` : t;
-            contenido_texto = lines.filter((l) => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
-          } else {
-            contenido_texto = resultado;
+          // Subir archivo
+          setState({ bulkProgress: { current: done, total: totalParts, step: `Subiendo ${original.name}${sufijo}...` } });
+          const { file_url } = await base44.integrations.Core.UploadFile({ file: parts[p] });
+
+          // Transcribir con IA (gemini_3_flash: rápido y soporta visión)
+          setState({ bulkProgress: { current: done, total: totalParts, step: `Transcribiendo ${original.name}${sufijo}...` } });
+          let contenido_texto = "";
+          let titulo = parts.length > 1 ? `${nombreBase} - Parte ${p + 1}` : nombreBase;
+          try {
+            const resultado = await invokeLLM({
+              prompt: PROMPT_TRANSCRIPCION,
+              file_urls: [file_url],
+              model: "gemini_3_flash",
+            });
+            const lines = String(resultado).split("\n");
+            const tituloLine = lines.findLast((l) => l.trim().startsWith("TÍTULO SUGERIDO:"));
+            if (tituloLine) {
+              const t = tituloLine.replace("TÍTULO SUGERIDO:", "").trim();
+              if (t) titulo = parts.length > 1 ? `${t} - Parte ${p + 1}` : t;
+              contenido_texto = lines.filter((l) => !l.trim().startsWith("TÍTULO SUGERIDO:")).join("\n").trim();
+            } else {
+              contenido_texto = resultado;
+            }
+          } catch {
+            contenido_texto = "";
           }
-        } catch {
-          contenido_texto = "";
-        }
 
-        // Subir texto si es muy largo
-        if (contenido_texto && contenido_texto.length > 8000) {
-          const blob = new Blob([contenido_texto], { type: "text/plain" });
-          const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
-          const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-          contenido_texto = txt_url;
-        }
+          // Subir texto si es muy largo
+          if (contenido_texto && contenido_texto.length > 8000) {
+            const blob = new Blob([contenido_texto], { type: "text/plain" });
+            const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
+            const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
+            contenido_texto = txt_url;
+          }
 
-        // Guardar documento
-        await base44.entities.CasoDocumento.create({
-          caso_id: casoId,
-          titulo,
-          tipo_documento: tipo,
-          file_url,
-          contenido_texto,
-          fuente: "",
-          fecha_documento: "",
-          notas: parts.length > 1 ? `Parte ${p + 1} de ${parts.length} (división automática)` : "",
-          orden: done - 1,
-        });
+          // Guardar documento
+          await base44.entities.CasoDocumento.create({
+            caso_id: casoId,
+            titulo,
+            tipo_documento: tipo,
+            file_url,
+            contenido_texto,
+            fuente: "",
+            fecha_documento: "",
+            notas: parts.length > 1 ? `Parte ${p + 1} de ${parts.length} (división automática)` : "",
+            orden: done - 1,
+          });
+        } catch (err) {
+          errores++;
+          // Un archivo falla pero el lote continúa con el siguiente
+        }
       }
     }
 
     queryClientInstance.invalidateQueries({ queryKey: ["caso_documentos", casoId] });
-    toast({ title: "Carga masiva completada", description: `Se procesaron ${totalParts} archivo(s).`, variant: "default" });
+    toast({ title: "Carga masiva completada", description: `Se procesaron ${totalParts} archivo(s)${errores > 0 ? ` (${errores} con error)` : ""}.`, variant: "default" });
   } catch (err) {
     toast({ title: "Error al subir documentos", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
   } finally {
