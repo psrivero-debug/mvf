@@ -12,6 +12,14 @@ import { recordUsage, estimateTokens } from "./tokenTracker";
 export async function invokeLLM(params) {
   try {
     const res = await base44.integrations.Core.InvokeLLM(params);
+    // InvokeLLM no lanza error cuando un archivo supera los 10 MB: devuelve un
+    // texto de rechazo. Lo detectamos y forzamos el fallback a geminiLLM.
+    const esRechazoTamano =
+      typeof res === "string" &&
+      /no puedo procesar|supera el límite|comprimí (el pdf|el archivo|el)|dividí el pdf|dividí el archivo/i.test(res);
+    if (esRechazoTamano && params.file_urls && params.file_urls.length > 0) {
+      throw new Error("file_too_large_refusal");
+    }
     recordUsage("base44", estimateTokens(params.prompt), estimateTokens(res));
     return res;
   } catch (err) {

@@ -37,7 +37,15 @@ Deno.serve(async (req) => {
         if (!resp.ok) continue;
         const contentType = resp.headers.get('content-type') || 'application/octet-stream';
         const buffer = await resp.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        // Codificación base64 por chunks para evitar desbordamiento de pila
+        // en archivos grandes (btoa(String.fromCharCode(...spread)) falla >~8MB).
+        const bytes = new Uint8Array(buffer);
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+        }
+        const base64 = btoa(binary);
         parts.push({
           inlineData: {
             mimeType: contentType,
