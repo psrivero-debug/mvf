@@ -141,14 +141,16 @@ export default function DocumentosList({ caso, documentos }) {
     try {
       // Preparar (comprimir/dividir) todos los archivos primero
       const prepared = [];
-      for (const file of files) {
-        const parts = await prepareFileForUpload(file, (current, total) =>
-          setConversionProgress({ current, total, name: file.name })
+      for (let fi = 0; fi < files.length; fi++) {
+        setBulkProgress({ current: fi, total: files.length, step: `Preparando ${files[fi].name}...` });
+        const parts = await prepareFileForUpload(files[fi], (current, total) =>
+          setConversionProgress({ current, total, name: files[fi].name })
         );
-        prepared.push({ original: file, parts });
+        prepared.push({ original: files[fi], parts });
+        setConversionProgress(null);
       }
       const totalParts = prepared.reduce((acc, p) => acc + p.parts.length, 0);
-      setBulkProgress({ current: 0, total: totalParts, step: "" });
+      setBulkProgress({ current: 0, total: totalParts, step: "Iniciando subida..." });
 
       let done = 0;
       for (const { original, parts } of prepared) {
