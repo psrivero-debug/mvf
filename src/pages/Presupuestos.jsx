@@ -641,7 +641,7 @@ export default function Presupuestos() {
               <Input value={newClient.dni_cuit} onChange={e => setNewClient({ ...newClient, dni_cuit: e.target.value })} />
             </div>
             <div className="grid gap-1.5">
-              <Label>Teléfono</Label>
+              <Label>Teléfono *</Label>
               <Input value={newClient.phone} onChange={e => setNewClient({ ...newClient, phone: e.target.value })} />
             </div>
             <div className="grid gap-1.5 col-span-2">
@@ -652,7 +652,7 @@ export default function Presupuestos() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewClient(false)}>Cancelar</Button>
             <Button
-              disabled={!newClient.nombre.trim() || !newClient.apellido.trim() || createClientMutation.isPending}
+              disabled={!newClient.nombre.trim() || !newClient.apellido.trim() || !newClient.phone.trim() || createClientMutation.isPending}
               onClick={() => {
                 const fullName = `${newClient.nombre.trim()} ${newClient.apellido.trim()}`;
                 createClientMutation.mutate({
