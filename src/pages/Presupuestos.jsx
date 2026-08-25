@@ -147,7 +147,7 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, cust
     ${adelantoNum > 0 ? `
     <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:10px;font-weight:bold;text-transform:uppercase;color:#047857;letter-spacing:.05em">Adelanto recibido</div>
+        <div style="font-size:10px;font-weight:bold;text-transform:uppercase;color:#047857;letter-spacing:.05em">Adelanto para iniciar trámite</div>
         <div style="font-size:18px;font-weight:bold;color:#065f46;margin-top:3px">${formatPesos(adelantoNum)}</div>
       </div>
       <div style="text-align:right">
@@ -457,7 +457,7 @@ export default function Presupuestos() {
 
               {/* Adelanto */}
               <div className="border-t pt-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Adelanto recibido (opcional)</p>
+                <p className="text-xs font-medium text-muted-foreground">Adelanto para iniciar trámite (opcional)</p>
                 <Input placeholder="Monto del adelanto ($)" type="number" value={adelanto}
                   onChange={e => setAdelanto(e.target.value)}
                   className="sm:w-48" />
@@ -480,7 +480,7 @@ export default function Presupuestos() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vista previa de opciones de pago <span className="text-amber-600">(+ IVA 21%)</span></p>
                 {adelantoNum > 0 && (
                   <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
-                    <span className="text-xs font-medium text-emerald-800">Adelanto recibido</span>
+                    <span className="text-xs font-medium text-emerald-800">Adelanto para iniciar trámite</span>
                     <span className="text-sm font-bold text-emerald-700">{formatPesos(adelantoNum)}</span>
                     <span className="text-xs font-medium text-emerald-800">Saldo pendiente</span>
                     <span className="text-sm font-bold text-primary">{formatPesos(saldo)} <span className="text-amber-600">+ IVA</span></span>
