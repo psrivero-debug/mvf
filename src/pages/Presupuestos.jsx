@@ -662,7 +662,7 @@ export default function Presupuestos() {
                       <Button size="sm" variant="outline" className="gap-1.5 text-xs text-emerald-700" onClick={() => {
                         const presupTarifas = tarifas.filter(t => (p.conceptos_ids || []).includes(t.id));
                         const ce = p.concepto_extra_descripcion ? { descripcion: p.concepto_extra_descripcion, monto: p.concepto_extra_monto } : null;
-                        const client = clients.find(c => c.id === p.client_id);
+                        const client = clients.find(c => c.id === p.client_id) || clients.find(c => c.full_name === p.client_name);
                         setWspPhone(client?.phone || "");
                         setWspDialog({
                           open: true, pres: p,
