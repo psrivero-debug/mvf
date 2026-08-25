@@ -35,6 +35,19 @@
       "type": "string",
       "description": "Nombres de conceptos seleccionados (texto)"
     },
+    "concepto_extra_descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del concepto adicional fuera de tabla IUS"
+    },
+    "concepto_extra_monto": {
+      "type": "number",
+      "description": "Monto del concepto adicional fuera de tabla IUS"
+    },
+    "adelanto": {
+      "type": "number",
+      "default": 0,
+      "description": "Monto de adelanto ya abonado"
+    },
     "monto_base": {
       "type": "number",
       "description": "Monto base del arancel (sin IVA)"

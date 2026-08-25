@@ -40,15 +40,16 @@ const REQUISITOS_POR_CATEGORIA = {
   otro: ["DNI o documento de identidad", "Documentación relevante al trámite"],
 };
 
-function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, customConcepto = null) {
+function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, customConcepto = null, adelanto = 0) {
   const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vencimiento = format(addDays(new Date(), 15), "d 'de' MMMM yyyy", { locale: es });
 
   const montoBase = pres.monto_base || 0;
-  const efectivo10 = Math.round(montoBase * 0.90);
-  const efectivoContado = montoBase; // 1 pago sin descuento extra
-  const cuota6 = Math.round(montoBase / 6);
-  const cuota12 = Math.round((montoBase * 1.10) / 12);
+  const adelantoNum = Number(adelanto) || 0;
+  const saldo = Math.max(montoBase - adelantoNum, 0);
+  const efectivo10 = Math.round(saldo * 0.90);
+  const efectivoContado = saldo; // 1 pago sin descuento extra
+  const cuota6 = Math.round(saldo / 6);
 
   // Categorías de los aranceles seleccionados para requisitos
   const categorias = [...new Set(tarifasSeleccionadas.map(t => t.categoria))];
@@ -143,8 +144,21 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, cust
       </tbody>
     </table>
 
-    <div class="section-title">Opciones de Pago</div>
-    <div class="pagos-grid">
+    ${adelantoNum > 0 ? `
+    <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:10px;font-weight:bold;text-transform:uppercase;color:#047857;letter-spacing:.05em">Adelanto recibido</div>
+        <div style="font-size:18px;font-weight:bold;color:#065f46;margin-top:3px">${formatPesos(adelantoNum)}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;font-weight:bold;text-transform:uppercase;color:#888;letter-spacing:.05em">Saldo pendiente</div>
+        <div style="font-size:18px;font-weight:bold;color:#1e3a5f;margin-top:3px">${formatPesos(saldo)} <span style="font-size:11px;color:#92400e">+ IVA</span></div>
+      </div>
+    </div>
+    ` : ""}
+
+    <div class="section-title">Opciones de Pago${adelantoNum > 0 ? " (sobre saldo)" : ""}</div>
+    <div class="pagos-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="pago-box destacado">
         <div class="ptitle">Efectivo (10% dto.)</div>
         <div class="pamt">${formatPesos(efectivo10)}</div>
@@ -159,11 +173,6 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, cust
         <div class="ptitle">6 cuotas fijas</div>
         <div class="pamt">${formatPesos(cuota6)}</div>
         <div class="psub">por mes · sin interés</div>
-      </div>
-      <div class="pago-box">
-        <div class="ptitle">12 cuotas (+10%)</div>
-        <div class="pamt">${formatPesos(cuota12)}</div>
-        <div class="psub">por mes · total: ${formatPesos(cuota12 * 12)}</div>
       </div>
     </div>
 
@@ -226,6 +235,7 @@ export default function Presupuestos() {
   });
   const [busquedaPresupuesto, setBusquedaPresupuesto] = useState("");
   const [conceptoExtra, setConceptoExtra] = useState({ descripcion: "", monto: "" });
+  const [adelanto, setAdelanto] = useState("");
   const queryClient = useQueryClient();
 
   const { data: presupuestos = [], isLoading } = useQuery({
@@ -254,7 +264,7 @@ export default function Presupuestos() {
     mutationFn: (data) => base44.entities.Presupuesto.create(data),
     onSuccess: (pres) => {
       queryClient.invalidateQueries({ queryKey: ["presupuestos"] });
-      imprimirPresupuesto(pres, selectedTarifas, valorBase, configs[0], conceptoExtra.descripcion ? conceptoExtra : null);
+      imprimirPresupuesto(pres, selectedTarifas, valorBase, configs[0], conceptoExtra.descripcion ? conceptoExtra : null, adelanto);
       setShowForm(false);
       resetForm();
     },
@@ -271,12 +281,14 @@ export default function Presupuestos() {
     setSelectedTarifas([]);
     setTarifaSearch("");
     setConceptoExtra({ descripcion: "", monto: "" });
+    setAdelanto("");
   };
 
   const montoBase = selectedTarifas.reduce((s, t) => s + (t.multiplicador * valorBase), 0) + (Number(conceptoExtra.monto) || 0);
-  const efectivo10 = Math.round(montoBase * 0.90);
-  const cuota6 = Math.round(montoBase / 6);
-  const cuota12 = Math.round((montoBase * 1.10) / 12);
+  const adelantoNum = Number(adelanto) || 0;
+  const saldo = Math.max(montoBase - adelantoNum, 0);
+  const efectivo10 = Math.round(saldo * 0.90);
+  const cuota6 = Math.round(saldo / 6);
 
   const toggleTarifa = (t) => {
     setSelectedTarifas(prev =>
@@ -304,12 +316,14 @@ export default function Presupuestos() {
       monto_base: montoBase,
       conceptos_ids: selectedTarifas.map(t => t.id),
       conceptos_nombres: [...selectedTarifas.map(t => t.concepto), ...(conceptoExtra.descripcion ? [conceptoExtra.descripcion] : [])].join(", "),
+      concepto_extra_descripcion: conceptoExtra.descripcion || "",
+      concepto_extra_monto: Number(conceptoExtra.monto) || 0,
+      adelanto: adelantoNum,
       fecha_emision: new Date().toISOString().split("T")[0],
       fecha_vencimiento: format(addDays(new Date(), 15), "yyyy-MM-dd"),
       monto_efectivo_desc: efectivo10,
-      monto_contado: montoBase,
+      monto_contado: saldo,
       cuotas_6: cuota6,
-      cuotas_12: cuota12,
     };
     createMutation.mutate(data);
   };
@@ -317,7 +331,8 @@ export default function Presupuestos() {
   // Retomar presupuesto existente para reimprimir
   const retomar = (p) => {
     const presupTarifas = tarifas.filter(t => (p.conceptos_ids || []).includes(t.id));
-    imprimirPresupuesto(p, presupTarifas.length > 0 ? presupTarifas : tarifas.filter(t => p.conceptos_nombres?.includes(t.concepto)), valorBase, configs[0], null);
+    const conceptoExtraSaved = p.concepto_extra_descripcion ? { descripcion: p.concepto_extra_descripcion, monto: p.concepto_extra_monto } : null;
+    imprimirPresupuesto(p, presupTarifas.length > 0 ? presupTarifas : tarifas.filter(t => p.conceptos_nombres?.includes(t.concepto)), valorBase, configs[0], conceptoExtraSaved, p.adelanto || 0);
   };
 
   return (
@@ -439,6 +454,19 @@ export default function Presupuestos() {
                   </p>
                 )}
               </div>
+
+              {/* Adelanto */}
+              <div className="border-t pt-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Adelanto recibido (opcional)</p>
+                <Input placeholder="Monto del adelanto ($)" type="number" value={adelanto}
+                  onChange={e => setAdelanto(e.target.value)}
+                  className="sm:w-48" />
+                {adelantoNum > 0 && (
+                  <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 inline-block">
+                    Adelanto: {formatPesos(adelantoNum)} · Saldo: {formatPesos(saldo)} + IVA
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-2">
@@ -450,7 +478,15 @@ export default function Presupuestos() {
             {montoBase > 0 && (
               <div className="rounded-xl bg-muted/40 border p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vista previa de opciones de pago <span className="text-amber-600">(+ IVA 21%)</span></p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {adelantoNum > 0 && (
+                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
+                    <span className="text-xs font-medium text-emerald-800">Adelanto recibido</span>
+                    <span className="text-sm font-bold text-emerald-700">{formatPesos(adelantoNum)}</span>
+                    <span className="text-xs font-medium text-emerald-800">Saldo pendiente</span>
+                    <span className="text-sm font-bold text-primary">{formatPesos(saldo)} <span className="text-amber-600">+ IVA</span></span>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-3">
                   <div className="bg-primary/5 border-2 border-primary rounded-xl p-3 text-center">
                     <p className="text-xs text-muted-foreground font-medium">Efectivo (10% dto.)</p>
                     <p className="text-lg font-bold text-primary mt-1">{formatPesos(efectivo10)}</p>
@@ -458,17 +494,12 @@ export default function Presupuestos() {
                   </div>
                   <div className="bg-background border rounded-xl p-3 text-center">
                     <p className="text-xs text-muted-foreground font-medium">Contado 1 pago</p>
-                    <p className="text-lg font-bold mt-1">{formatPesos(montoBase)}</p>
+                    <p className="text-lg font-bold mt-1">{formatPesos(saldo)}</p>
                     <p className="text-xs text-muted-foreground">sin recargo</p>
                   </div>
                   <div className="bg-background border rounded-xl p-3 text-center">
                     <p className="text-xs text-muted-foreground font-medium">6 cuotas fijas</p>
                     <p className="text-lg font-bold mt-1">{formatPesos(cuota6)}</p>
-                    <p className="text-xs text-muted-foreground">por mes</p>
-                  </div>
-                  <div className="bg-background border rounded-xl p-3 text-center">
-                    <p className="text-xs text-muted-foreground font-medium">12 cuotas (+10%)</p>
-                    <p className="text-lg font-bold mt-1">{formatPesos(cuota12)}</p>
                     <p className="text-xs text-muted-foreground">por mes</p>
                   </div>
                 </div>
