@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Printer, Trash2, FileText, User, Calendar, X, ChevronRight } from "lucide-react";
+import { Plus, Search, Printer, Trash2, FileText, User, Calendar, X, ChevronRight, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -236,6 +237,8 @@ export default function Presupuestos() {
   const [busquedaPresupuesto, setBusquedaPresupuesto] = useState("");
   const [conceptoExtra, setConceptoExtra] = useState({ descripcion: "", monto: "" });
   const [adelanto, setAdelanto] = useState("");
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClient, setNewClient] = useState({ nombre: "", apellido: "", dni_cuit: "", phone: "", email: "" });
   const queryClient = useQueryClient();
 
   const { data: presupuestos = [], isLoading } = useQuery({
@@ -273,6 +276,18 @@ export default function Presupuestos() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Presupuesto.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presupuestos"] }),
+  });
+
+  const createClientMutation = useMutation({
+    mutationFn: (data) => base44.entities.Client.create(data),
+    onSuccess: (cli) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      const fullName = cli.full_name || `${cli.nombre || ""} ${cli.apellido || ""}`.trim();
+      setClientSearch(fullName);
+      setForm(f => ({ ...f, client_id: cli.id, client_name: fullName }));
+      setShowNewClient(false);
+      setNewClient({ nombre: "", apellido: "", dni_cuit: "", phone: "", email: "" });
+    },
   });
 
   const resetForm = () => {
@@ -376,14 +391,18 @@ export default function Presupuestos() {
                     onBlur={() => setTimeout(() => setShowClientDrop(false), 150)}
                     className="pl-9"
                   />
-                  {showClientDrop && filteredClients.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-44 overflow-y-auto">
+                  {showClientDrop && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-52 overflow-y-auto">
                       {filteredClients.map(c => (
                         <button key={c.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
                           onMouseDown={() => { setClientSearch(c.full_name); setForm({ ...form, client_id: c.id, client_name: c.full_name }); setShowClientDrop(false); }}>
                           {c.full_name}
                         </button>
                       ))}
+                      <button type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-accent border-t flex items-center gap-2 text-primary font-medium"
+                        onMouseDown={() => { setShowClientDrop(false); setShowNewClient(true); }}>
+                        <UserPlus className="w-4 h-4" /> Agregar nuevo cliente
+                      </button>
                     </div>
                   )}
                 </div>
@@ -601,6 +620,59 @@ export default function Presupuestos() {
           ))}
         </div>
       )}
+
+      {/* Dialog nuevo cliente */}
+      <Dialog open={showNewClient} onOpenChange={setShowNewClient}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5" /> Nuevo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <div className="grid gap-1.5">
+              <Label>Nombre *</Label>
+              <Input value={newClient.nombre} onChange={e => setNewClient({ ...newClient, nombre: e.target.value })} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Apellido *</Label>
+              <Input value={newClient.apellido} onChange={e => setNewClient({ ...newClient, apellido: e.target.value })} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>DNI / CUIT</Label>
+              <Input value={newClient.dni_cuit} onChange={e => setNewClient({ ...newClient, dni_cuit: e.target.value })} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Teléfono</Label>
+              <Input value={newClient.phone} onChange={e => setNewClient({ ...newClient, phone: e.target.value })} />
+            </div>
+            <div className="grid gap-1.5 col-span-2">
+              <Label>Email</Label>
+              <Input type="email" value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewClient(false)}>Cancelar</Button>
+            <Button
+              disabled={!newClient.nombre.trim() || !newClient.apellido.trim() || createClientMutation.isPending}
+              onClick={() => {
+                const fullName = `${newClient.nombre.trim()} ${newClient.apellido.trim()}`;
+                createClientMutation.mutate({
+                  client_type: "persona_fisica",
+                  nombre: newClient.nombre.trim(),
+                  apellido: newClient.apellido.trim(),
+                  full_name: fullName,
+                  dni_cuit: newClient.dni_cuit,
+                  phone: newClient.phone,
+                  email: newClient.email,
+                  status: "activo",
+                });
+              }}
+              className="gap-2"
+            >
+              {createClientMutation.isPending ? "Guardando..." : "Agregar y vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
