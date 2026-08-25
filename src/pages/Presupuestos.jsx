@@ -744,9 +744,14 @@ export default function Presupuestos() {
             <DialogTitle className="flex items-center gap-2"><MessageCircle className="w-5 h-5 text-emerald-600" /> Enviar por WhatsApp</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Generá el presupuesto como imagen o PDF, descargalo en tu equipo y adjuntalo en el chat de WhatsApp del cliente.
-            </p>
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900 space-y-1">
+              <p className="font-medium">¿Cómo funciona?</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-amber-800">
+                <li>Tocá <b>Descargar Imagen</b> o <b>Descargar PDF</b> para generar el archivo en tu equipo.</li>
+                <li>Tocá <b>Abrir WhatsApp</b> (se abre el chat con un mensaje predefinido).</li>
+                <li>Dentro de WhatsApp, adjuntá el archivo descargado con el ícono del clip antes de enviar.</li>
+              </ol>
+            </div>
             <div className="grid gap-1.5">
               <Label>Teléfono del cliente</Label>
               <Input placeholder="Ej: 5492664123456 (sin + ni espacios)" value={wspPhone} onChange={(e) => setWspPhone(e.target.value)} />
