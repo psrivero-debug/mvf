@@ -40,7 +40,7 @@ const REQUISITOS_POR_CATEGORIA = {
   otro: ["DNI o documento de identidad", "Documentación relevante al trámite"],
 };
 
-function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config) {
+function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, customConceptos = []) {
   const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vencimiento = format(addDays(new Date(), 15), "d 'de' MMMM yyyy", { locale: es });
 
@@ -59,6 +59,12 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config) {
       <td style="padding:8px 14px">${t.concepto}</td>
       <td style="padding:8px 14px;text-align:center">${t.multiplicador} IUS</td>
       <td style="padding:8px 14px;text-align:right">${formatPesos(valorBase * t.multiplicador)}</td>
+    </tr>
+  `).join("") + (customConceptos || []).map(c => `
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px 14px">${c.descripcion}</td>
+      <td style="padding:8px 14px;text-align:center">—</td>
+      <td style="padding:8px 14px;text-align:right">${formatPesos(Number(c.monto) || 0)}</td>
     </tr>
   `).join("");
 
@@ -219,6 +225,8 @@ export default function Presupuestos() {
     numero: "", client_id: "", client_name: "", notas: "",
   });
   const [busquedaPresupuesto, setBusquedaPresupuesto] = useState("");
+  const [customConceptos, setCustomConceptos] = useState([]);
+  const [nuevoConcepto, setNuevoConcepto] = useState({ descripcion: "", monto: "" });
   const queryClient = useQueryClient();
 
   const { data: presupuestos = [], isLoading } = useQuery({
@@ -247,7 +255,7 @@ export default function Presupuestos() {
     mutationFn: (data) => base44.entities.Presupuesto.create(data),
     onSuccess: (pres) => {
       queryClient.invalidateQueries({ queryKey: ["presupuestos"] });
-      imprimirPresupuesto(pres, selectedTarifas, valorBase, configs[0]);
+      imprimirPresupuesto(pres, selectedTarifas, valorBase, configs[0], customConceptos);
       setShowForm(false);
       resetForm();
     },
@@ -263,9 +271,11 @@ export default function Presupuestos() {
     setClientSearch("");
     setSelectedTarifas([]);
     setTarifaSearch("");
+    setCustomConceptos([]);
+    setNuevoConcepto({ descripcion: "", monto: "" });
   };
 
-  const montoBase = selectedTarifas.reduce((s, t) => s + (t.multiplicador * valorBase), 0);
+  const montoBase = selectedTarifas.reduce((s, t) => s + (t.multiplicador * valorBase), 0) + customConceptos.reduce((s, c) => s + (Number(c.monto) || 0), 0);
   const efectivo10 = Math.round(montoBase * 0.90);
   const cuota6 = Math.round(montoBase / 6);
   const cuota12 = Math.round((montoBase * 1.10) / 12);
@@ -295,7 +305,7 @@ export default function Presupuestos() {
       client_name: clientSearch || form.client_name,
       monto_base: montoBase,
       conceptos_ids: selectedTarifas.map(t => t.id),
-      conceptos_nombres: selectedTarifas.map(t => t.concepto).join(", "),
+      conceptos_nombres: [...selectedTarifas.map(t => t.concepto), ...customConceptos.map(c => c.descripcion)].join(", "),
       fecha_emision: new Date().toISOString().split("T")[0],
       fecha_vencimiento: format(addDays(new Date(), 15), "yyyy-MM-dd"),
       monto_efectivo_desc: efectivo10,
@@ -309,7 +319,7 @@ export default function Presupuestos() {
   // Retomar presupuesto existente para reimprimir
   const retomar = (p) => {
     const presupTarifas = tarifas.filter(t => (p.conceptos_ids || []).includes(t.id));
-    imprimirPresupuesto(p, presupTarifas.length > 0 ? presupTarifas : tarifas.filter(t => p.conceptos_nombres?.includes(t.concepto)), valorBase, configs[0]);
+    imprimirPresupuesto(p, presupTarifas.length > 0 ? presupTarifas : tarifas.filter(t => p.conceptos_nombres?.includes(t.concepto)), valorBase, configs[0], []);
   };
 
   return (
@@ -406,6 +416,37 @@ export default function Presupuestos() {
                   ))}
                 </div>
               )}
+
+              {/* Concepto adicional personalizado (fuera de tabla IUS) */}
+              <div className="border-t pt-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Agregar concepto adicional (fuera de tabla IUS)</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input placeholder="Descripción del concepto" value={nuevoConcepto.descripcion}
+                    onChange={e => setNuevoConcepto({ ...nuevoConcepto, descripcion: e.target.value })}
+                    className="flex-1" />
+                  <Input placeholder="Monto ($)" type="number" value={nuevoConcepto.monto}
+                    onChange={e => setNuevoConcepto({ ...nuevoConcepto, monto: e.target.value })}
+                    className="sm:w-32" />
+                  <Button type="button" variant="outline" size="sm"
+                    disabled={!nuevoConcepto.descripcion || !nuevoConcepto.monto}
+                    onClick={() => {
+                      setCustomConceptos([...customConceptos, { descripcion: nuevoConcepto.descripcion, monto: Number(nuevoConcepto.monto) }]);
+                      setNuevoConcepto({ descripcion: "", monto: "" });
+                    }} className="gap-1.5 shrink-0">
+                    <Plus className="w-4 h-4" /> Agregar
+                  </Button>
+                </div>
+                {customConceptos.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {customConceptos.map((c, i) => (
+                      <Badge key={i} variant="outline" className="gap-1 pr-1 bg-amber-50 border-amber-200 text-amber-800">
+                        {c.descripcion} · {formatPesos(c.monto)}
+                        <button onClick={() => setCustomConceptos(customConceptos.filter((_, idx) => idx !== i))} className="ml-1 hover:text-destructive"><X className="w-3 h-3" /></button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-2">
