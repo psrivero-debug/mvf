@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Printer, Trash2, FileText, User, Calendar, X, ChevronRight, UserPlus } from "lucide-react";
+import { Plus, Search, Printer, Trash2, FileText, User, Calendar, X, ChevronRight, UserPlus, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -41,7 +43,7 @@ const REQUISITOS_POR_CATEGORIA = {
   otro: ["DNI o documento de identidad", "Documentación relevante al trámite"],
 };
 
-function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, customConcepto = null, adelanto = 0) {
+function buildPresupuestoHTML(pres, tarifasSeleccionadas, valorBase, config, customConcepto = null, adelanto = 0) {
   const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vencimiento = format(addDays(new Date(), 15), "d 'de' MMMM yyyy", { locale: es });
 
@@ -70,8 +72,7 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, cust
     </tr>
   ` : "");
 
-  const w = window.open("", "_blank");
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: "Times New Roman", Times, serif; color: #222; background: #fff; font-size: 12pt; }
@@ -219,9 +220,55 @@ function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, cust
       <div class="footer" style="margin-top:40px">Pérez &amp; Funes — Estudio Jurídico · San Luis · Los montos son más IVA (21%)</div>
     </div>
   </div>
-  </body></html>`);
+  </body></html>`;
+}
+
+function imprimirPresupuesto(pres, tarifasSeleccionadas, valorBase, config, customConcepto = null, adelanto = 0) {
+  const w = window.open("", "_blank");
+  w.document.write(buildPresupuestoHTML(pres, tarifasSeleccionadas, valorBase, config, customConcepto, adelanto));
   w.document.close();
   w.print();
+}
+
+async function generarArchivoPresupuesto(pres, tarifasSeleccionadas, valorBase, config, customConcepto, adelanto, formato) {
+  const html = buildPresupuestoHTML(pres, tarifasSeleccionadas, valorBase, config, customConcepto, adelanto);
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.left = "-9999px";
+  iframe.style.top = "0";
+  iframe.style.width = "820px";
+  iframe.style.height = "1200px";
+  iframe.style.border = "0";
+  iframe.srcdoc = html;
+  document.body.appendChild(iframe);
+  await new Promise((res) => { iframe.onload = res; });
+  await new Promise((r) => setTimeout(r, 250));
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  const canvas = await html2canvas(doc.body, { scale: 2, useCORS: true, backgroundColor: "#ffffff", width: 820, windowWidth: 820 });
+  document.body.removeChild(iframe);
+  const fileName = `presupuesto-${(pres.numero || pres.client_name || "documento").replace(/\s+/g, "-")}`;
+  if (formato === "pdf") {
+    const pdf = new jsPDF("p", "mm", "a4");
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+    heightLeft -= 297;
+    while (heightLeft > 0) {
+      position -= 297;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= 297;
+    }
+    pdf.save(`${fileName}.pdf`);
+  } else {
+    const link = document.createElement("a");
+    link.download = `${fileName}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
 }
 
 export default function Presupuestos() {
@@ -239,6 +286,9 @@ export default function Presupuestos() {
   const [adelanto, setAdelanto] = useState("");
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClient, setNewClient] = useState({ nombre: "", apellido: "", dni_cuit: "", phone: "", email: "" });
+  const [wspDialog, setWspDialog] = useState({ open: false, pres: null, tarifas: [], conceptoExtra: null, adelanto: 0 });
+  const [wspPhone, setWspPhone] = useState("");
+  const [wspLoading, setWspLoading] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: presupuestos = [], isLoading } = useQuery({
@@ -609,6 +659,19 @@ export default function Presupuestos() {
                       <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => retomar(p)}>
                         <Printer className="w-3.5 h-3.5" /> Reimprimir
                       </Button>
+                      <Button size="sm" variant="outline" className="gap-1.5 text-xs text-emerald-700" onClick={() => {
+                        const presupTarifas = tarifas.filter(t => (p.conceptos_ids || []).includes(t.id));
+                        const ce = p.concepto_extra_descripcion ? { descripcion: p.concepto_extra_descripcion, monto: p.concepto_extra_monto } : null;
+                        const client = clients.find(c => c.id === p.client_id);
+                        setWspPhone(client?.phone || "");
+                        setWspDialog({
+                          open: true, pres: p,
+                          tarifas: presupTarifas.length > 0 ? presupTarifas : tarifas.filter(t => p.conceptos_nombres?.includes(t.concepto)),
+                          conceptoExtra: ce, adelanto: p.adelanto || 0,
+                        });
+                      }}>
+                        <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                      </Button>
                       <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(p.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -669,6 +732,47 @@ export default function Presupuestos() {
               className="gap-2"
             >
               {createClientMutation.isPending ? "Guardando..." : "Agregar y vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog enviar por WhatsApp */}
+      <Dialog open={wspDialog.open} onOpenChange={(o) => setWspDialog((d) => ({ ...d, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><MessageCircle className="w-5 h-5 text-emerald-600" /> Enviar por WhatsApp</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Generá el presupuesto como imagen o PDF, descargalo en tu equipo y adjuntalo en el chat de WhatsApp del cliente.
+            </p>
+            <div className="grid gap-1.5">
+              <Label>Teléfono del cliente</Label>
+              <Input placeholder="Ej: 5492664123456 (sin + ni espacios)" value={wspPhone} onChange={(e) => setWspPhone(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Se abre WhatsApp con un mensaje predefinido; el archivo descargado se adjunta manualmente.</p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="gap-2" disabled={wspLoading} onClick={async () => {
+              setWspLoading("imagen");
+              try { await generarArchivoPresupuesto(wspDialog.pres, wspDialog.tarifas, valorBase, configs[0], wspDialog.conceptoExtra, wspDialog.adelanto, "imagen"); }
+              finally { setWspLoading(null); }
+            }}>
+              {wspLoading === "imagen" ? "Generando..." : "Descargar Imagen"}
+            </Button>
+            <Button variant="outline" className="gap-2" disabled={wspLoading} onClick={async () => {
+              setWspLoading("pdf");
+              try { await generarArchivoPresupuesto(wspDialog.pres, wspDialog.tarifas, valorBase, configs[0], wspDialog.conceptoExtra, wspDialog.adelanto, "pdf"); }
+              finally { setWspLoading(null); }
+            }}>
+              {wspLoading === "pdf" ? "Generando..." : "Descargar PDF"}
+            </Button>
+            <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={!wspPhone.trim()} onClick={() => {
+              const msg = encodeURIComponent(`Hola ${wspDialog.pres?.client_name || ""}, te envío el presupuesto Nº ${wspDialog.pres?.numero || "—"} de Pérez & Funes. Adjunto el documento.`);
+              window.open(`https://wa.me/${wspPhone.replace(/\D/g, "")}?text=${msg}`, "_blank");
+            }}>
+              <MessageCircle className="w-4 h-4" /> Abrir WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>
