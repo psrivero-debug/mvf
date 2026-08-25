@@ -393,7 +393,7 @@ export default function Presupuestos() {
 
             {/* Selector de aranceles */}
             <div className="grid gap-2">
-              <Label>Conceptos de Arancel (Tabla IUS) *</Label>
+              <Label>Conceptos de Arancel (Tabla IUS)</Label>
               <Input placeholder="Buscar concepto..." value={tarifaSearch} onChange={e => setTarifaSearch(e.target.value)} />
               <div className="border rounded-lg max-h-52 overflow-y-auto divide-y">
                 {tarifasFiltradas.length === 0 && (
@@ -513,7 +513,7 @@ export default function Presupuestos() {
               <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Cancelar</Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!clientSearch || selectedTarifas.length === 0 || createMutation.isPending}
+                disabled={!clientSearch || createMutation.isPending}
                 className="gap-2"
               >
                 <Printer className="w-4 h-4" />
