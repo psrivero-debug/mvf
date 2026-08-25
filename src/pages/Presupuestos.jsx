@@ -17,6 +17,14 @@ import { es } from "date-fns/locale";
 const formatPesos = (n) =>
   (n || 0).toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
+const formatMontoInput = (val) => {
+  const digits = String(val ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("es-AR");
+};
+
+const parseMontoInput = (val) => Number(String(val ?? "").replace(/\D/g, "")) || 0;
+
 // Requisitos por categoría de arancel
 const REQUISITOS_POR_CATEGORIA = {
   consulta: ["DNI o documento de identidad", "Documentación relacionada al caso"],
@@ -349,8 +357,8 @@ export default function Presupuestos() {
     setAdelanto("");
   };
 
-  const montoBase = selectedTarifas.reduce((s, t) => s + (t.multiplicador * valorBase), 0) + (Number(conceptoExtra.monto) || 0);
-  const adelantoNum = Number(adelanto) || 0;
+  const montoBase = selectedTarifas.reduce((s, t) => s + (t.multiplicador * valorBase), 0) + parseMontoInput(conceptoExtra.monto);
+  const adelantoNum = parseMontoInput(adelanto);
   const saldo = Math.max(montoBase - adelantoNum, 0);
   const efectivo10 = Math.round(saldo * 0.90);
   const cuota6 = Math.round(saldo / 6);
@@ -382,7 +390,7 @@ export default function Presupuestos() {
       conceptos_ids: selectedTarifas.map(t => t.id),
       conceptos_nombres: [...selectedTarifas.map(t => t.concepto), ...(conceptoExtra.descripcion ? [conceptoExtra.descripcion] : [])].join(", "),
       concepto_extra_descripcion: conceptoExtra.descripcion || "",
-      concepto_extra_monto: Number(conceptoExtra.monto) || 0,
+      concepto_extra_monto: parseMontoInput(conceptoExtra.monto),
       adelanto: adelantoNum,
       fecha_emision: new Date().toISOString().split("T")[0],
       fecha_vencimiento: format(addDays(new Date(), 15), "yyyy-MM-dd"),
@@ -506,8 +514,8 @@ export default function Presupuestos() {
                   <Input placeholder="Descripción del concepto" value={conceptoExtra.descripcion}
                     onChange={e => setConceptoExtra({ ...conceptoExtra, descripcion: e.target.value })}
                     className="flex-1" />
-                  <Input placeholder="Monto ($)" type="number" value={conceptoExtra.monto}
-                    onChange={e => setConceptoExtra({ ...conceptoExtra, monto: e.target.value })}
+                  <Input inputMode="numeric" placeholder="Monto ($)" value={conceptoExtra.monto}
+                    onChange={e => setConceptoExtra({ ...conceptoExtra, monto: formatMontoInput(e.target.value) })}
                     className="sm:w-32" />
                   {conceptoExtra.descripcion || conceptoExtra.monto ? (
                     <Button type="button" variant="ghost" size="sm"
@@ -527,8 +535,8 @@ export default function Presupuestos() {
               {/* Adelanto */}
               <div className="border-t pt-3 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">Adelanto para iniciar trámite (opcional)</p>
-                <Input placeholder="Monto del adelanto ($)" type="number" value={adelanto}
-                  onChange={e => setAdelanto(e.target.value)}
+                <Input inputMode="numeric" placeholder="Monto del adelanto ($)" value={adelanto}
+                  onChange={e => setAdelanto(formatMontoInput(e.target.value))}
                   className="sm:w-48" />
                 {adelantoNum > 0 && (
                   <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 inline-block">
