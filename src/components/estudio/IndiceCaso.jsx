@@ -9,6 +9,8 @@ import { es } from "date-fns/locale";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { invokeLLM } from "@/lib/llm";
+import LeerCompleto from "./LeerCompleto";
+import VersionesDocumento from "./VersionesDocumento";
 
 const tipoLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -128,31 +130,7 @@ ${texto.slice(0, 2000)}`,
   return fecha;
 }
 
-function LeerCompleto({ contenido_texto }) {
-  const [texto, setTexto] = useState(null);
-  const [abierto, setAbierto] = useState(false);
 
-  const handleAbrir = async () => {
-    if (!abierto && texto === null) {
-      const resuelto = await resolverContenido(contenido_texto);
-      setTexto(resuelto);
-    }
-    setAbierto(prev => !prev);
-  };
-
-  return (
-    <div className="mt-2">
-      <button onClick={handleAbrir} className="text-xs text-primary cursor-pointer hover:underline select-none">
-        {abierto ? "Ocultar texto" : "Leer completo"}
-      </button>
-      {abierto && (
-        <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs font-mono whitespace-pre-wrap max-h-96 overflow-y-auto border leading-relaxed">
-          {texto === null ? <Loader2 className="w-3 h-3 animate-spin" /> : texto}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function IndiceCaso({ documentos }) {
   const [search, setSearch] = useState("");
@@ -259,7 +237,12 @@ export default function IndiceCaso({ documentos }) {
         const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file });
         contenido_texto = txt_url;
       }
-      const updates = { contenido_texto };
+      // Conservar la versión anterior (texto y resumen) antes de sobrescribir
+      const versiones = [...(doc.versiones || [])];
+      if (doc.contenido_texto || doc.resumen) {
+        versiones.push({ fecha: new Date().toISOString(), contenido_texto: doc.contenido_texto || null, resumen: doc.resumen || null });
+      }
+      const updates = { contenido_texto, versiones: versiones.slice(-10) };
       if (resultado.titulo) updates.titulo = resultado.titulo;
       if (resultado.fecha && !doc.fecha_documento) updates.fecha_documento = resultado.fecha;
       await base44.entities.CasoDocumento.update(doc.id, updates);
@@ -576,6 +559,9 @@ export default function IndiceCaso({ documentos }) {
                   {doc.contenido_texto && (
                     <LeerCompleto contenido_texto={doc.contenido_texto} />
                   )}
+
+                  {/* Versiones anteriores guardadas */}
+                  <VersionesDocumento doc={doc} />
                 </div>
 
                 {/* Acciones derecha */}

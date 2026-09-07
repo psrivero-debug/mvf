@@ -76,7 +76,19 @@ export default function DocumentosList({ caso, documentos }) {
 
   const handleSubmit = () => {
     const data = { ...form, caso_id: caso.id };
-    if (editing) updateMutation.mutate({ id: editing.id, data });
+    if (editing) {
+      // Si cambió el texto, conservar la versión anterior antes de sobrescribir
+      if ((form.contenido_texto || "") !== (editing.contenido_texto || "")) {
+        const versiones = [...(editing.versiones || []), {
+          fecha: new Date().toISOString(),
+          contenido_texto: editing.contenido_texto || null,
+          resumen: editing.resumen || null,
+        }].slice(-10);
+        updateMutation.mutate({ id: editing.id, data: { ...data, versiones } });
+      } else {
+        updateMutation.mutate({ id: editing.id, data });
+      }
+    }
     else createMutation.mutate(data);
   };
 

@@ -52,6 +52,28 @@
     "resumen": {
       "type": "string",
       "description": "Resumen generado por IA (persistido para no regenerar)"
+    },
+    "versiones": {
+      "type": "array",
+      "description": "Versiones anteriores del documento, conservadas al modificar su contenido o re-digitalizarlo",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Momento en que se archiv\u00f3 la versi\u00f3n"
+          },
+          "contenido_texto": {
+            "type": "string",
+            "description": "Texto de la versi\u00f3n anterior"
+          },
+          "resumen": {
+            "type": "string",
+            "description": "Resumen de la versi\u00f3n anterior"
+          }
+        }
+      }
     }
   },
   "required": [

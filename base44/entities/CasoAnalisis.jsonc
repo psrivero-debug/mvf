@@ -30,6 +30,10 @@
         "type": "string"
       },
       "description": "IDs de documentos citados en el an\u00e1lisis"
+    },
+    "contexto_hash": {
+      "type": "string",
+      "description": "Hash del contexto de documentos usado (IDs + versi\u00f3n del contenido). Si cambia el contexto, la misma consulta se guarda como versi\u00f3n nueva en el historial"
     }
   },
   "required": [

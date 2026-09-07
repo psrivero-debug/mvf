@@ -435,6 +435,17 @@ function RespuestaAnalisis({ respuesta, caso, agente }) {
   );
 }
 
+// Hash del contexto de documentos (IDs + versión del contenido): si los documentos
+// cambian (carga, edición o re-digitalización), la misma consulta genera una versión nueva
+function hashContexto(docs) {
+  const material = docs.map(d => `${d.id}:${d.updated_date || ""}:${d.contenido_resuelto?.length || 0}`).join("|");
+  let h = 0;
+  for (let i = 0; i < material.length; i++) {
+    h = (h * 31 + material.charCodeAt(i)) | 0;
+  }
+  return `${h}`;
+}
+
 function sugerirAgentes(consulta) {
   if (!consulta || consulta.trim().length < 5) return [];
   const lower = consulta.toLowerCase();
@@ -516,10 +527,11 @@ export default function AgenteIA({ caso, documentos }) {
       ? docsConTexto.map(d => `--- DOCUMENTO: "${d.titulo}" (Fuente: ${d.fuente || "No especificada"}, Fecha: ${d.fecha_documento || "No especificada"}) ---\n${d.contenido_resuelto}`).join("\n\n")
       : "(No hay documentos con texto disponibles en el caso)";
 
+    const contextoHash = hashContexto(docsConTexto);
     const agentesOmitidos = [];
     for (const agenteId of agentesIds) {
-      // Verificar si ya existe un análisis idéntico (misma consulta + mismo agente)
-      const yaExiste = analisis.some(a => a.consulta === consultaTexto && a.agente === agenteId);
+      // Ya existe un análisis idéntico: misma consulta + mismo agente + mismo contexto de documentos
+      const yaExiste = analisis.some(a => a.consulta === consultaTexto && a.agente === agenteId && (a.contexto_hash || "") === contextoHash);
       if (yaExiste) {
         agentesOmitidos.push(agenteId);
         continue;
@@ -547,6 +559,7 @@ export default function AgenteIA({ caso, documentos }) {
         consulta: consultaTexto,
         respuesta,
         documentos_referenciados: docsSeleccionados,
+        contexto_hash: contextoHash,
       });
       queryClient.invalidateQueries({ queryKey: ["caso_analisis", caso.id] });
     }
