@@ -9,6 +9,7 @@ export default function PuntosCaso({ caso, documentos, analisis }) {
 
   const generarPuntos = async () => {
     setLoading(true);
+    const forceFresh = !!puntos; // "Regenerar" pide un análisis nuevo, no el guardado
 
     // Resolver textos de análisis previos
     const analisisConTexto = await Promise.all(
@@ -30,6 +31,7 @@ export default function PuntosCaso({ caso, documentos, analisis }) {
       : "(Sin análisis previos)";
 
     const resultado = await base44.integrations.Core.InvokeLLM({
+      forceFresh,
       prompt: `Analizá el siguiente caso judicial de la Provincia de San Luis y listá sus puntos fuertes y puntos débiles desde una perspectiva jurídica objetiva.
 
 CASO: ${caso.titulo}
