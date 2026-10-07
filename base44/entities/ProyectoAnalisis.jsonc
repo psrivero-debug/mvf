@@ -13,6 +13,23 @@
     "respuesta": {
       "type": "string",
       "description": "Respuesta obtenida del consultor IA (guardada para no repetir consultas)"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "consulta",
+        "indagacion",
+        "contraparte",
+        "juez",
+        "ficha",
+        "escrito"
+      ],
+      "default": "consulta",
+      "description": "Tipo de intervenci\u00f3n: consulta directa, indagaci\u00f3n profunda, punto de vista de la contraparte, opini\u00f3n del juez, ficha de idea o borrador de escrito"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo de la ficha de idea o del escrito (si aplica)"
     }
   },
   "required": [
