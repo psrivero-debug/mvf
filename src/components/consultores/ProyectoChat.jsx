@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { Send, Loader2, MessagesSquare } from "lucide-react";
+import DictadoVoz from "@/components/DictadoVoz";
 import ReactMarkdown from "react-markdown";
 import { resolverTextoRef as resolverTexto } from "@/lib/privateFiles";
 
@@ -111,6 +112,10 @@ export default function ProyectoChat({ consultor, proyecto, documentos }) {
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
           placeholder="Escribí tu consulta sobre este proyecto..."
           className="min-h-[44px] max-h-32 resize-none"
+        />
+        <DictadoVoz
+          disabled={enviando}
+          onTexto={(texto) => setInput(prev => prev ? `${prev} ${texto}` : texto)}
         />
         <Button onClick={enviar} disabled={enviando || !input.trim()} size="icon" className="h-auto shrink-0">
           <Send className="w-4 h-4" />
