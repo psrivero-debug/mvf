@@ -1,0 +1,22 @@
+{
+  "name": "ProyectoAnalisis",
+  "type": "object",
+  "properties": {
+    "proyecto_id": {
+      "type": "string",
+      "description": "ID del ProyectoConsultoria"
+    },
+    "consulta": {
+      "type": "string",
+      "description": "Consulta enviada al consultor"
+    },
+    "respuesta": {
+      "type": "string",
+      "description": "Respuesta obtenida del consultor IA (guardada para no repetir consultas)"
+    }
+  },
+  "required": [
+    "proyecto_id",
+    "consulta"
+  ]
+}

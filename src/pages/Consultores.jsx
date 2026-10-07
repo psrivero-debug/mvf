@@ -1,11 +1,16 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, ArrowLeft, Scale, Calculator, Briefcase, Landmark, Home, Heart } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import { invokeLLM } from "@/lib/llm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "@/components/ui/use-toast";
+import { Sparkles, ArrowLeft, Scale, Calculator, Briefcase, Landmark, Home, Heart, Plus, FolderOpen, Trash2, Loader2, FolderInput } from "lucide-react";
+import ProyectoVista from "@/components/consultores/ProyectoVista";
 
 const CONSULTORES = [
   {
@@ -60,96 +65,165 @@ const CONSULTORES = [
 
 export default function Consultores() {
   const [activo, setActivo] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const endRef = useRef(null);
+  const [proyectoAbierto, setProyectoAbierto] = useState(null);
+  const [dialogNuevo, setDialogNuevo] = useState(false);
+  const [formNuevo, setFormNuevo] = useState({ titulo: "", descripcion: "" });
+  const [confirmandoBorrar, setConfirmandoBorrar] = useState(null);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  const { data: proyectos = [], isLoading } = useQuery({
+    queryKey: ["proyectos_consultoria", activo?.id],
+    queryFn: () => base44.entities.ProyectoConsultoria.filter({ consultor_id: activo.id }, "-created_date", 50),
+    enabled: !!activo && !proyectoAbierto,
+  });
 
-  const seleccionar = (c) => {
-    setActivo(c);
-    setMessages([{ role: "assistant", content: `Hola, soy el **${c.nombre}**. ${c.descripcion} ¿En qué puedo orientarte?` }]);
+  const crearMutation = useMutation({
+    mutationFn: (data) => base44.entities.ProyectoConsultoria.create(data),
+    onSuccess: (rec) => {
+      queryClient.invalidateQueries({ queryKey: ["proyectos_consultoria", activo?.id] });
+      setDialogNuevo(false);
+      setFormNuevo({ titulo: "", descripcion: "" });
+      setProyectoAbierto(rec);
+    },
+    onError: () => toast({ title: "Error", description: "No se pudo crear el proyecto.", variant: "destructive" }),
+  });
+
+  const borrarMutation = useMutation({
+    mutationFn: (id) => base44.entities.ProyectoConsultoria.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proyectos_consultoria", activo?.id] });
+      setConfirmandoBorrar(null);
+    },
+  });
+
+  const crearProyecto = () => {
+    if (!formNuevo.titulo.trim()) return;
+    crearMutation.mutate({ consultor_id: activo.id, titulo: formNuevo.titulo.trim(), descripcion: formNuevo.descripcion.trim() });
   };
 
-  const enviar = async () => {
-    const texto = input.trim();
-    if (!texto || isLoading) return;
-    setInput("");
-    setMessages(prev => [...prev, { role: "user", content: texto }]);
-    setIsLoading(true);
-    try {
-      const prompt = `${activo.prompt}\n\nConsulta del usuario:\n${texto}`;
-      const res = await invokeLLM({ prompt, add_context_from_internet: true });
-      setMessages(prev => [...prev, { role: "assistant", content: res }]);
-    } catch (e) {
-      setMessages(prev => [...prev, { role: "assistant", content: "*Error al procesar la consulta. Intentá nuevamente.*" }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Vista del proyecto abierto
+  if (activo && proyectoAbierto) {
+    return (
+      <ProyectoVista
+        consultor={activo}
+        proyecto={proyectoAbierto}
+        onVolver={() => { setProyectoAbierto(null); queryClient.invalidateQueries({ queryKey: ["proyectos_consultoria", activo.id] }); }}
+      />
+    );
+  }
 
+  // Vista de proyectos del consultor
   if (activo) {
     const Icon = activo.icon;
     return (
-      <div className="p-4 lg:p-6 max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={() => { setActivo(null); setMessages([]); }}>
+      <div className="p-4 lg:p-6 max-w-5xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => setActivo(null)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${activo.color}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${activo.color} shrink-0`}>
             <Icon className="w-5 h-5" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-serif font-semibold">{activo.nombre}</h1>
             <p className="text-sm text-muted-foreground">{activo.descripcion}</p>
           </div>
+          <Button size="sm" className="gap-2" onClick={() => setDialogNuevo(true)}>
+            <Plus className="w-4 h-4" /> Nuevo proyecto
+          </Button>
         </div>
 
-        <Card className="flex flex-col h-[calc(100vh-220px)]">
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                <div className={m.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-2xl px-4 py-3 max-w-[85%]"
-                  : "bg-muted rounded-2xl px-4 py-3 max-w-[85%]"}>
-                  {m.role === "user"
-                    ? <p className="text-sm whitespace-pre-wrap">{m.content}</p>
-                    : <div className="prose prose-sm max-w-none"><ReactMarkdown>{m.content}</ReactMarkdown></div>}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-2xl px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analizando consulta...
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={endRef} />
-          </CardContent>
-          <div className="border-t p-3 flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-              placeholder="Escribí tu consulta..."
-              className="min-h-[44px] max-h-32 resize-none"
-            />
-            <Button onClick={enviar} disabled={isLoading || !input.trim()} size="icon" className="h-auto">
-              <Send className="w-4 h-4" />
-            </Button>
+        {isLoading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+        ) : proyectos.length === 0 ? (
+          <div className="text-center py-16 border-2 border-dashed rounded-xl">
+            <FolderOpen className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground text-sm">Todavía no hay proyectos con este consultor.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Creá un proyecto para cargar documentos y guardar los análisis.</p>
           </div>
-        </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {proyectos.map((p) => (
+              <Card key={p.id} className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => setProyectoAbierto(p)}>
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-border bg-muted/30 shrink-0">
+                      <FolderInput className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base truncate group-hover:text-accent transition-colors">{p.titulo}</CardTitle>
+                      <Badge variant="secondary" className="mt-1 text-[10px]">{p.estado === "cerrado" ? "Cerrado" : "Activo"}</Badge>
+                    </div>
+                    {confirmandoBorrar === p.id ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive border border-destructive/30" onClick={() => borrarMutation.mutate(p.id)}>
+                          Confirmar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-1" onClick={() => setConfirmandoBorrar(null)}>
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm" variant="ghost"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={(e) => { e.stopPropagation(); setConfirmandoBorrar(p.id); }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                {p.descripcion && (
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{p.descripcion}</p>
+                  </CardContent>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <Dialog open={dialogNuevo} onOpenChange={setDialogNuevo}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nuevo proyecto</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2">
+                <Label>Título *</Label>
+                <Input
+                  autoFocus
+                  placeholder="Ej: Despido de Juan Pérez"
+                  value={formNuevo.titulo}
+                  onChange={(e) => setFormNuevo({ ...formNuevo, titulo: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === "Enter") crearProyecto(); }}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Descripción del caso</Label>
+                <Textarea
+                  placeholder="Contá brevemente el caso a tratar..."
+                  value={formNuevo.descripcion}
+                  onChange={(e) => setFormNuevo({ ...formNuevo, descripcion: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogNuevo(false)}>Cancelar</Button>
+              <Button onClick={crearProyecto} disabled={!formNuevo.titulo.trim() || crearMutation.isPending}>
+                {crearMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Crear proyecto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
 
+  // Vista de selección de consultor
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
       <div className="mb-6">
@@ -158,7 +232,7 @@ export default function Consultores() {
           Consultores IA
         </h1>
         <p className="text-muted-foreground mt-1">
-          Elegí el especialista según tu interés. Cada consultor orienta con IA sobre su área, con fundamento en normativa argentina.
+          Elegí el especialista según tu interés. Dentro de cada consultor podés crear proyectos, cargar documentos (imágenes o textos) y guardar los análisis obtenidos.
         </p>
       </div>
 
@@ -166,7 +240,7 @@ export default function Consultores() {
         {CONSULTORES.map((c) => {
           const Icon = c.icon;
           return (
-            <Card key={c.id} className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => seleccionar(c)}>
+            <Card key={c.id} className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => { setActivo(c); setProyectoAbierto(null); }}>
               <CardHeader>
                 <div className="flex items-start gap-3">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${c.color} shrink-0`}>
