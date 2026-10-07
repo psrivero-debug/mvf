@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
+import mammoth from "mammoth";
 import { Plus, Loader2, Upload, FileText, Trash2, Eye, EyeOff, ScanText } from "lucide-react";
 
 const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
@@ -25,6 +26,7 @@ export default function ProyectoDocumentos({ proyecto }) {
   const [expandedId, setExpandedId] = useState(null);
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(null);
   const fileInputRef = useRef(null);
+  const wordInputRef = useRef(null);
   const queryClient = useQueryClient();
 
   const { data: documentos = [] } = useQuery({
@@ -93,6 +95,28 @@ export default function ProyectoDocumentos({ proyecto }) {
     }
   };
 
+  const subirWord = async (file) => {
+    const titulo = form.titulo.trim() || file.name.replace(/\.[^/.]+$/, "");
+    setSubiendo(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const { value: texto } = await mammoth.extractRawText({ arrayBuffer });
+      await base44.entities.ProyectoDocumento.create({
+        proyecto_id: proyecto.id,
+        titulo,
+        tipo_documento: "texto",
+        contenido_texto: texto,
+      });
+      invalidate();
+      cerrarDialog();
+      toast({ title: "Documento Word cargado", description: "Se extrajo el texto correctamente y quedó guardado en el proyecto." });
+    } catch (err) {
+      toast({ title: "Error al leer el Word", description: err?.message || "Intentá nuevamente.", variant: "destructive" });
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
   const retranscribir = async (doc) => {
     if (!doc.file_url) return;
     setTranscribiendoId(doc.id);
@@ -124,7 +148,10 @@ export default function ProyectoDocumentos({ proyecto }) {
       {documentos.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed rounded-xl">
           <FileText className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-muted-foreground text-sm">No hay documentos en este proyecto. Agregá imágenes o textos para que el consultor los analice.</p>
+          <p className="text-muted-foreground text-sm">No hay documentos en este proyecto. Agregá imágenes, Word o textos para que el consultor los analice.</p>
+          <Button size="sm" className="gap-2 mt-3" onClick={() => setDialogOpen(true)}>
+            <Plus className="w-4 h-4" /> Agregar documento
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -215,6 +242,7 @@ export default function ProyectoDocumentos({ proyecto }) {
                 <SelectContent>
                   <SelectItem value="texto">Texto (pegar o escribir)</SelectItem>
                   <SelectItem value="imagen">Imagen (se transcribe con IA)</SelectItem>
+                  <SelectItem value="word">Word .docx (se extrae el texto)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -229,7 +257,7 @@ export default function ProyectoDocumentos({ proyecto }) {
                   className="font-mono text-sm"
                 />
               </div>
-            ) : (
+            ) : form.tipo_documento === "imagen" ? (
               <div className="grid gap-2">
                 <Label>Archivo de imagen</Label>
                 <div className="flex gap-2 items-center">
@@ -250,6 +278,28 @@ export default function ProyectoDocumentos({ proyecto }) {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">La imagen se sube y se transcribe automáticamente con IA.</p>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <Label>Archivo Word (.docx)</Label>
+                <div className="flex gap-2 items-center">
+                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => wordInputRef.current?.click()} disabled={subiendo}>
+                    {subiendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {subiendo ? "Procesando..." : "Subir Word"}
+                  </Button>
+                  <input
+                    ref={wordInputRef}
+                    type="file"
+                    accept=".docx"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) subirWord(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Se extrae el texto del documento y queda guardado en el proyecto.</p>
               </div>
             )}
           </div>
