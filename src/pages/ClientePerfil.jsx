@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { subirArchivoPrivado, urlFirmada, useUrlsFirmadas } from "@/lib/privateFiles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,7 @@ export default function ClientePerfil({ clientId, onClose }) {
   const [casForm, setCasForm] = useState({ titulo:"", tipo_caso:"civil", estado:"activo", jurisdiccion:"", numero_expediente:"", descripcion:"" });
   const [reciboForm, setReciboForm] = useState({ numero:"", fecha:new Date().toISOString().split("T")[0], concepto:"", monto:"", forma_pago:"efectivo", notas:"" });
   const [legajoForm, setLegajoForm] = useState({ titulo:"", tipo_documento:"otro", notas:"", fecha_documento:"", file_url:"" });
+  const [previewFirmadaLegajo, setPreviewFirmadaLegajo] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
@@ -144,6 +146,7 @@ export default function ClientePerfil({ clientId, onClose }) {
   const { data: presupuestos = [] } = useQuery({ queryKey:["presupuestos-cliente", clientId], queryFn: () => base44.entities.Presupuesto.filter({ client_id:clientId }, "-created_date"), enabled:!!clientId });
   const { data: recibos = [] } = useQuery({ queryKey:["recibos-cliente", clientId], queryFn: () => base44.entities.Recibo.filter({ client_id:clientId }, "-created_date"), enabled:!!clientId });
   const { data: legajos = [] } = useQuery({ queryKey:["legajos", clientId], queryFn: () => base44.entities.Legajo.filter({ client_id:clientId }, "-created_date"), enabled:!!clientId });
+  const urlsLegajo = useUrlsFirmadas(legajos.map(l => l.file_url));
   const { data: contrapartes = [] } = useQuery({ queryKey:["contrapartes", clientId], queryFn: () => base44.entities.Contraparte.filter({ client_id:clientId }), enabled:!!clientId });
 
   // ── Mutations ──────────────────────────────────────────────────
@@ -177,8 +180,9 @@ export default function ClientePerfil({ clientId, onClose }) {
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setLegajoForm(prev => ({ ...prev, file_url }));
+    const uri = await subirArchivoPrivado(file);
+    setLegajoForm(prev => ({ ...prev, file_url: uri }));
+    setPreviewFirmadaLegajo(await urlFirmada(uri));
     setUploading(false);
   };
 
@@ -201,7 +205,7 @@ export default function ClientePerfil({ clientId, onClose }) {
     const contenido = `ACTA PODER\n\n${t.p1}\n\n${t.p2}\n\n${t.p3}\n\n${t.p4}`;
     const blob = new Blob([contenido], { type:"text/plain" });
     const file = new File([blob], `ActaPoder_${t.nombreCliente}.txt`, { type:"text/plain" });
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const file_url = await subirArchivoPrivado(file);
     await base44.entities.Legajo.create({
       client_id: client.id,
       client_name: client.full_name,
@@ -506,14 +510,14 @@ export default function ClientePerfil({ clientId, onClose }) {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {legajos.map(doc => (
                   <div key={doc.id} className="group relative border rounded-xl overflow-hidden bg-card shadow-sm hover:shadow-md transition-all">
-                    <div className="aspect-[3/4] bg-muted/40 cursor-pointer overflow-hidden relative" onClick={() => setPreviewLegajo(doc.file_url)}>
+                    <div className="aspect-[3/4] bg-muted/40 cursor-pointer overflow-hidden relative" onClick={() => setPreviewLegajo(urlsLegajo[doc.file_url] || doc.file_url)}>
                       {doc.file_url ? (
-                        <img src={doc.file_url} alt={doc.titulo} className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" onError={e => { e.target.style.display="none"; }} />
+                        <img src={urlsLegajo[doc.file_url] || doc.file_url} alt={doc.titulo} className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" onError={e => { e.target.style.display="none"; }} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><FileText className="w-8 h-8 text-muted-foreground/30" /></div>
                       )}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                        <button className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow" onClick={e => { e.stopPropagation(); setPreviewLegajo(doc.file_url); }}><Eye className="w-4 h-4 text-primary" /></button>
+                        <button className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow" onClick={e => { e.stopPropagation(); setPreviewLegajo(urlsLegajo[doc.file_url] || doc.file_url); }}><Eye className="w-4 h-4 text-primary" /></button>
                         <button className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow" onClick={e => { e.stopPropagation(); deleteLegajo.mutate(doc.id); }}><Trash2 className="w-4 h-4 text-destructive" /></button>
                       </div>
                     </div>
@@ -654,9 +658,9 @@ export default function ClientePerfil({ clientId, onClose }) {
               </div>
             ) : (
               <div className="relative rounded-xl overflow-hidden border">
-                <img src={legajoForm.file_url} alt="Vista previa" className="w-full max-h-40 object-contain bg-muted/20" onError={e => { e.target.style.display="none"; }} />
+                <img src={previewFirmadaLegajo} alt="Vista previa" className="w-full max-h-40 object-contain bg-muted/20" onError={e => { e.target.style.display="none"; }} />
                 <div className="p-2 text-center text-xs text-green-600 font-medium">✓ Archivo subido</div>
-                <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white" onClick={() => setLegajoForm({...legajoForm,file_url:""})}><X className="w-3.5 h-3.5" /></button>
+                <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white" onClick={() => { setPreviewFirmadaLegajo(null); setLegajoForm({...legajoForm,file_url:""}); }}><X className="w-3.5 h-3.5" /></button>
               </div>
             )}
             <div className="grid gap-2"><Label>Notas</Label><Textarea placeholder="Observaciones..." value={legajoForm.notas} onChange={e => setLegajoForm({...legajoForm,notas:e.target.value})} rows={2} /></div>

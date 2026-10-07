@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { invokeLLM } from "@/lib/llm";
 import LeerCompleto from "./LeerCompleto";
 import VersionesDocumento from "./VersionesDocumento";
+import { resolverTextoRef as resolverContenido, subirTextoLargo } from "@/lib/privateFiles";
 
 const tipoLabels = {
   escrito: "Escrito", sentencia: "Sentencia", pericia: "Pericia",
@@ -61,20 +62,6 @@ async function digitalizarDocumento(doc) {
     .join("\n").trim();
 
   return { contenido, titulo, fecha };
-}
-
-// Si contenido_texto es una URL (texto largo subido como archivo), hace fetch del contenido real
-async function resolverContenido(texto) {
-  if (!texto) return "";
-  if (texto.startsWith("http://") || texto.startsWith("https://")) {
-    try {
-      const res = await fetch(texto);
-      return await res.text();
-    } catch {
-      return texto;
-    }
-  }
-  return texto;
 }
 
 async function generarResumen(doc) {
@@ -231,12 +218,7 @@ export default function IndiceCaso({ documentos }) {
     if (resultado) {
       let contenido_texto = resultado.contenido;
       // Si el texto es muy largo, subirlo como archivo y guardar solo la URL
-      if (contenido_texto && contenido_texto.length > 8000) {
-        const blob = new Blob([contenido_texto], { type: "text/plain" });
-        const file = new File([blob], `doc_${doc.id}.txt`, { type: "text/plain" });
-        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file });
-        contenido_texto = txt_url;
-      }
+      contenido_texto = await subirTextoLargo(contenido_texto, `doc_${doc.id}`);
       // Conservar la versión anterior (texto y resumen) antes de sobrescribir
       const versiones = [...(doc.versiones || [])];
       if (doc.contenido_texto || doc.resumen) {

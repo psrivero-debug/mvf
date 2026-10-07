@@ -3,6 +3,7 @@ import { prepareFileForUpload } from "@/lib/fileProcessing";
 import { invokeLLM } from "@/lib/llm";
 import { queryClientInstance } from "@/lib/query-client";
 import { toast } from "@/components/ui/use-toast";
+import { subirArchivoPrivado, urlFirmada, subirTextoLargo } from "@/lib/privateFiles";
 
 export const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
 Tu tarea es transcribir el contenido de esta imagen con la máxima fidelidad posible.
@@ -83,16 +84,17 @@ export async function startBulkUpload(files, casoId) {
         try {
           // Subir archivo
           setState({ bulkProgress: { current: done, total: totalParts, step: `Subiendo ${original.name}${sufijo}...` } });
-          const { file_url } = await base44.integrations.Core.UploadFile({ file: parts[p] });
+          const file_uri = await subirArchivoPrivado(parts[p]);
 
           // Transcribir con IA (gemini_3_flash: rápido y soporta visión)
           setState({ bulkProgress: { current: done, total: totalParts, step: `Transcribiendo ${original.name}${sufijo}...` } });
           let contenido_texto = "";
           let titulo = parts.length > 1 ? `${nombreBase} - Parte ${p + 1}` : nombreBase;
           try {
+            const urlFirm = await urlFirmada(file_uri);
             const resultado = await invokeLLM({
               prompt: PROMPT_TRANSCRIPCION,
-              file_urls: [file_url],
+              file_urls: [urlFirm],
               model: "gemini_3_flash",
             });
             const lines = String(resultado).split("\n");
@@ -109,19 +111,14 @@ export async function startBulkUpload(files, casoId) {
           }
 
           // Subir texto si es muy largo
-          if (contenido_texto && contenido_texto.length > 8000) {
-            const blob = new Blob([contenido_texto], { type: "text/plain" });
-            const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
-            const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-            contenido_texto = txt_url;
-          }
+          contenido_texto = await subirTextoLargo(contenido_texto, `doc_${Date.now()}`);
 
           // Guardar documento
           await base44.entities.CasoDocumento.create({
             caso_id: casoId,
             titulo,
             tipo_documento: tipo,
-            file_url,
+            file_url: file_uri,
             contenido_texto,
             fuente: "",
             fecha_documento: "",

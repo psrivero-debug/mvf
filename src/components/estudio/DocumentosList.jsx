@@ -13,6 +13,8 @@ import { Plus, Trash2, FileText, Image, Upload, Loader2, Eye, EyeOff, Pencil, Fi
 import { toast } from "@/components/ui/use-toast";
 import { prepareFileForUpload } from "@/lib/fileProcessing";
 import { invokeLLM } from "@/lib/llm";
+import { subirArchivoPrivado, urlFirmada, subirTextoLargo } from "@/lib/privateFiles";
+import LeerCompleto from "./LeerCompleto";
 import { subscribeBulkUpload, startBulkUpload, getBulkUploadState, PROMPT_TRANSCRIPCION } from "@/lib/bulkUploadManager";
 
 const tipoDocLabels = {
@@ -107,8 +109,7 @@ export default function DocumentosList({ caso, documentos }) {
       // Subir todas las partes
       const uploaded = [];
       for (const part of parts) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: part });
-        uploaded.push(file_url);
+        uploaded.push(await subirArchivoPrivado(part));
       }
 
       // La primera parte va al formulario
@@ -161,20 +162,15 @@ export default function DocumentosList({ caso, documentos }) {
 
     try {
       // 1. Subir el audio
-      const { file_url: audioUrl } = await base44.integrations.Core.UploadFile({ file });
-      setForm(prev => ({ ...prev, file_url: audioUrl, tipo_documento: "testimonio" }));
+      const audioUri = await subirArchivoPrivado(file);
+      setForm(prev => ({ ...prev, file_url: audioUri, tipo_documento: "testimonio" }));
 
       // 2. Transcribir con Whisper (TranscribeAudio)
-      const transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrl });
+      const audioUrlFirmado = await urlFirmada(audioUri);
+      const transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrlFirmado });
 
       // 3. Guardar texto (si es muy largo, subir como .txt)
-      let textoGuardar = transcripcion;
-      if (transcripcion && transcripcion.length > 8000) {
-        const blob = new Blob([transcripcion], { type: "text/plain" });
-        const txtFile = new File([blob], `${nombreBase}.txt`, { type: "text/plain" });
-        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-        textoGuardar = txt_url;
-      }
+      const textoGuardar = await subirTextoLargo(transcripcion, nombreBase);
 
       setForm(prev => ({
         ...prev,
@@ -197,7 +193,7 @@ export default function DocumentosList({ caso, documentos }) {
       // procesamiento de 10 MB, cae automáticamente a geminiLLM (hasta ~20 MB).
       const resultado = await invokeLLM({
         prompt: PROMPT_TRANSCRIPCION,
-        file_urls: [form.file_url],
+        file_urls: [await urlFirmada(form.file_url)],
         model: "claude_sonnet_4_6",
       });
 
@@ -212,13 +208,7 @@ export default function DocumentosList({ caso, documentos }) {
       }
 
       // Subir texto si es muy largo
-      let textoGuardar = textoFinal;
-      if (textoFinal && textoFinal.length > 8000) {
-        const blob = new Blob([textoFinal], { type: "text/plain" });
-        const txtFile = new File([blob], `doc_${Date.now()}.txt`, { type: "text/plain" });
-        const { file_url: txt_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-        textoGuardar = txt_url;
-      }
+      const textoGuardar = await subirTextoLargo(textoFinal, `doc_${Date.now()}`);
 
       setForm(prev => ({
         ...prev,
@@ -315,28 +305,16 @@ export default function DocumentosList({ caso, documentos }) {
                     {doc.notas && <p className="text-xs text-muted-foreground italic mt-0.5">{doc.notas}</p>}
 
                     {doc.contenido_texto && (
-                      <div className="mt-2">
-                        <button
-                          onClick={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
-                          className="flex items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          {expandedId === doc.id ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                          {expandedId === doc.id ? "Ocultar texto" : "Ver texto completo"}
-                        </button>
-                        {expandedId === doc.id && (
-                          <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs font-mono whitespace-pre-wrap max-h-64 overflow-y-auto border">
-                            {doc.contenido_texto}
-                          </div>
-                        )}
-                      </div>
+                      <LeerCompleto contenido_texto={doc.contenido_texto} />
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {doc.file_url && (
-                      <Button size="sm" variant="ghost" asChild>
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                          <Eye className="w-3.5 h-3.5" />
-                        </a>
+                      <Button size="sm" variant="ghost" onClick={async () => {
+                        const url = await urlFirmada(doc.file_url);
+                        if (url) window.open(url, "_blank");
+                      }}>
+                        <Eye className="w-3.5 h-3.5" />
                       </Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => openEdit(doc)}>

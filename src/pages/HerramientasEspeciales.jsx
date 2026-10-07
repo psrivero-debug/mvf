@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { subirArchivoPrivado, urlFirmada } from "@/lib/privateFiles";
 import { invokeLLM } from "@/lib/llm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,10 +35,11 @@ function ImagenAWord() {
     setLoading(true);
     setDone(false);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: image });
+      const uri = await subirArchivoPrivado(image);
+      const urlFirm = await urlFirmada(uri);
       const texto = await invokeLLM({
         prompt: `Extraé y transcribí con exactitud todo el texto que aparece en esta imagen. Mantené el formato original lo más posible (títulos, párrafos, listas). Devolvé solo el texto, sin comentarios adicionales.`,
-        file_urls: [file_url],
+        file_urls: [urlFirm],
       });
       setResult(texto);
       setDone(true);
@@ -109,7 +111,7 @@ async function descargarDocxConImagenes(imagenes, docs, textosEmbebidos, instruc
   for (const img of imagenes) {
     children.push(new Paragraph({ children: [new TextRun({ text: img.name, bold: true, size: 20 })] }));
     // Fetch image as ArrayBuffer
-    const response = await fetch(img.url);
+    const response = await fetch(await urlFirmada(img.url));
     const buffer = await response.arrayBuffer();
     const ext = img.name.split(".").pop().toLowerCase();
     const type = ext === "png" ? "png" : ext === "gif" ? "gif" : "jpg";
@@ -177,11 +179,11 @@ function FusionarDocumentos() {
     if (!selected.length) return;
     setUploading(true);
     try {
-      const uploads = await Promise.all(selected.map(f => base44.integrations.Core.UploadFile({ file: f })));
+      const uris = await Promise.all(selected.map(f => subirArchivoPrivado(f)));
       const nuevos = selected.map((f, i) => ({
         type: "file",
         name: f.name,
-        url: uploads[i].file_url,
+        url: uris[i],
         isImage: f.type.startsWith("image/"),
         preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : null,
       }));
@@ -219,7 +221,7 @@ function FusionarDocumentos() {
       }
 
       // Modo: convertir imágenes a texto y unificar todo
-      const fileUrls = items.filter(i => i.type === "file").map(i => i.url);
+      const fileUrls = await Promise.all(items.filter(i => i.type === "file").map(i => urlFirmada(i.url)));
       const prompt = `Tenés ${fileUrls.length} archivo(s) adjunto(s)${textosEmbebidos ? " y los siguientes bloques de texto adicional:\n\n" + textosEmbebidos : ""}.\n\nTu tarea es: ${instruccion || "extraé todo el contenido de las imágenes y documentos, luego unificá TODO en un único documento coherente, bien ordenado y sin repeticiones. Si hay imágenes, transcribí su texto. Organizá el resultado de manera profesional con títulos claros."}\n\nDevolvé el documento unificado completo usando # para títulos principales y ## para subtítulos.`;
 
       const res = await invokeLLM({
@@ -367,8 +369,8 @@ function VerificarDocumento() {
     setFile(f);
     setResultado("");
     setDone(false);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: f });
-    setFileUrl(file_url);
+    const uri = await subirArchivoPrivado(f);
+    setFileUrl(uri);
     e.target.value = "";
   };
 
@@ -382,7 +384,7 @@ function VerificarDocumento() {
         : `Analizá este documento jurídico/legal con criterio profesional. Identificá: 1) Tipo de documento y partes involucradas. 2) Observaciones y puntos relevantes. 3) Posibles errores, omisiones o cláusulas problemáticas. 4) Recomendaciones. Sé preciso y usa lenguaje jurídico argentino.`;
       const res = await invokeLLM({
         prompt,
-        file_urls: [fileUrl],
+        file_urls: [await urlFirmada(fileUrl)],
         model: "claude_sonnet_4_6",
       });
       setResultado(res);

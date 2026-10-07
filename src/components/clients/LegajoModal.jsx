@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Trash2, Eye, X, Loader2, FolderOpen, Plus, ImageIcon, Mic, FileText, RefreshCw } from "lucide-react";
+import { subirArchivoPrivado, urlFirmada, useUrlsFirmadas } from "@/lib/privateFiles";
 
 const tipoDocLabels = {
   dni: "DNI",
@@ -54,6 +55,7 @@ export default function LegajoModal({ client, open, onClose }) {
   const [uploading, setUploading] = useState(false);
   const [transcribiendoAudio, setTranscribiendoAudio] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewFirmada, setPreviewFirmada] = useState(null);
   const fileRef = useRef(null);
   const audioRef = useRef(null);
   const queryClient = useQueryClient();
@@ -63,6 +65,8 @@ export default function LegajoModal({ client, open, onClose }) {
     queryFn: () => base44.entities.Legajo.filter({ client_id: client.id }, "-created_date"),
     enabled: !!client?.id,
   });
+
+  const urls = useUrlsFirmadas(legajos.map(d => d.file_url));
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Legajo.create(data),
@@ -92,17 +96,17 @@ export default function LegajoModal({ client, open, onClose }) {
     const nombreBase = file.name.replace(/\.[^/.]+$/, "");
     setTranscribiendoAudio(true);
 
-    // 1. Subir audio
-    const { file_url: audioUrl } = await base44.integrations.Core.UploadFile({ file });
+    // 1. Subir audio (privado)
+    const audioUri = await subirArchivoPrivado(file);
 
     // 2. Transcribir con Whisper
-    let transcripcion = "";
-    transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrl });
+    const audioUrlFirmado = await urlFirmada(audioUri);
+    const transcripcion = await base44.integrations.Core.TranscribeAudio({ audio_url: audioUrlFirmado });
 
-    // 3. Guardar transcripción como archivo .txt
+    // 3. Guardar transcripción como archivo .txt (privado)
     const blob = new Blob([transcripcion], { type: "text/plain" });
     const txtFile = new File([blob], `${nombreBase}.txt`, { type: "text/plain" });
-    const { file_url: txtUrl } = await base44.integrations.Core.UploadFile({ file: txtFile });
+    const txtUrl = await subirArchivoPrivado(txtFile);
 
     // 4. Guardar en legajo
     createMutation.mutate({
@@ -123,8 +127,9 @@ export default function LegajoModal({ client, open, onClose }) {
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({ ...prev, file_url }));
+    const uri = await subirArchivoPrivado(file);
+    setForm(prev => ({ ...prev, file_url: uri }));
+    setPreviewFirmada(await urlFirmada(uri));
     setUploading(false);
   };
 
@@ -186,7 +191,7 @@ export default function LegajoModal({ client, open, onClose }) {
                   <div key={doc.id} className="group relative border rounded-xl overflow-hidden bg-card shadow-sm hover:shadow-md transition-all">
                     <div
                       className="aspect-[3/4] bg-muted/40 cursor-pointer overflow-hidden relative"
-                      onClick={() => doc.file_url?.endsWith(".txt") ? window.open(doc.file_url, "_blank") : setPreviewUrl(doc.file_url)}
+                      onClick={() => doc.file_url?.endsWith(".txt") ? window.open(urls[doc.file_url] || doc.file_url, "_blank") : setPreviewUrl(urls[doc.file_url] || doc.file_url)}
                     >
                       {doc.file_url?.endsWith(".txt") ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-muted/30">
@@ -195,7 +200,7 @@ export default function LegajoModal({ client, open, onClose }) {
                         </div>
                       ) : doc.file_url ? (
                         <img
-                          src={doc.file_url}
+                          src={urls[doc.file_url] || doc.file_url}
                           alt={doc.titulo}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                         />
@@ -207,7 +212,7 @@ export default function LegajoModal({ client, open, onClose }) {
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                         <button
                           className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow"
-                          onClick={(e) => { e.stopPropagation(); doc.file_url?.endsWith(".txt") ? window.open(doc.file_url, "_blank") : setPreviewUrl(doc.file_url); }}
+                          onClick={(e) => { e.stopPropagation(); doc.file_url?.endsWith(".txt") ? window.open(urls[doc.file_url] || doc.file_url, "_blank") : setPreviewUrl(urls[doc.file_url] || doc.file_url); }}
                         >
                           <Eye className="w-4 h-4 text-primary" />
                         </button>
@@ -339,10 +344,10 @@ export default function LegajoModal({ client, open, onClose }) {
                   </div>
                 ) : (
                   <div className="relative rounded-xl overflow-hidden border">
-                    <img src={form.file_url} alt="Vista previa" className="w-full max-h-40 object-contain bg-muted/20" />
+                    <img src={previewFirmada} alt="Vista previa" className="w-full max-h-40 object-contain bg-muted/20" />
                     <button
                       className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white"
-                      onClick={() => setForm({ ...form, file_url: "" })}
+                      onClick={() => { setPreviewFirmada(null); setForm({ ...form, file_url: "" }); }}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

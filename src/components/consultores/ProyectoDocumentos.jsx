@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import mammoth from "mammoth";
+import { subirArchivoPrivado, urlFirmada } from "@/lib/privateFiles";
 import { Plus, Loader2, Upload, FileText, Trash2, Eye, EyeOff, ScanText } from "lucide-react";
 
 const PROMPT_TRANSCRIPCION = `Sos un transcriptor experto en documentos jurídicos argentinos escaneados.
@@ -62,21 +63,22 @@ export default function ProyectoDocumentos({ proyecto }) {
     const titulo = form.titulo.trim() || file.name.replace(/\.[^/.]+$/, "");
     setSubiendo(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const file_uri = await subirArchivoPrivado(file);
       const rec = await base44.entities.ProyectoDocumento.create({
         proyecto_id: proyecto.id,
         titulo,
         tipo_documento: "imagen",
-        file_url,
+        file_url: file_uri,
       });
       invalidate();
       cerrarDialog();
       // Transcripción automática con IA
       setTranscribiendoId(rec.id);
       try {
+        const urlFirm = await urlFirmada(file_uri);
         const texto = await invokeLLM({
           prompt: PROMPT_TRANSCRIPCION,
-          file_urls: [file_url],
+          file_urls: [urlFirm],
           model: "claude_sonnet_4_6",
         });
         if (texto) {
@@ -123,7 +125,7 @@ export default function ProyectoDocumentos({ proyecto }) {
     try {
       const texto = await invokeLLM({
         prompt: PROMPT_TRANSCRIPCION,
-        file_urls: [doc.file_url],
+        file_urls: [await urlFirmada(doc.file_url)],
         model: "claude_sonnet_4_6",
       });
       if (texto) {
@@ -191,10 +193,11 @@ export default function ProyectoDocumentos({ proyecto }) {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {doc.file_url && (
-                      <Button size="sm" variant="ghost" asChild>
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" title="Ver archivo original">
-                          <ScanText className="w-3.5 h-3.5" />
-                        </a>
+                      <Button size="sm" variant="ghost" title="Ver archivo original" onClick={async () => {
+                        const url = await urlFirmada(doc.file_url);
+                        if (url) window.open(url, "_blank");
+                      }}>
+                        <ScanText className="w-3.5 h-3.5" />
                       </Button>
                     )}
                     {doc.file_url && (

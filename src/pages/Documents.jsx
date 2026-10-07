@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { subirArchivoPrivado, urlFirmada } from "@/lib/privateFiles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,8 +58,8 @@ export default function Documents() {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({ ...prev, file_url }));
+    const uri = await subirArchivoPrivado(file);
+    setForm(prev => ({ ...prev, file_url: uri }));
     setUploading(false);
   };
 
@@ -140,9 +141,10 @@ export default function Documents() {
                     <Pencil className="w-3 h-3" /> Editar
                   </Button>
                   {doc.file_url && (
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline" className="text-xs"><Download className="w-3 h-3" /></Button>
-                    </a>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
+                      const url = await urlFirmada(doc.file_url);
+                      if (url) window.open(url, "_blank");
+                    }}><Download className="w-3 h-3" /></Button>
                   )}
                   <Button size="sm" variant="ghost" className="text-destructive text-xs" onClick={() => deleteMutation.mutate(doc.id)}>
                     <Trash2 className="w-3 h-3" />

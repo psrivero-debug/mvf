@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Bot, Send, Loader2, Scale, Shield, FileSearch, User, Trash2, Sparkles, CheckSquare, Square, Clock, Tag, Zap, Printer, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { subirTextoLargo, resolverTextoRef } from "@/lib/privateFiles";
 import Anotaciones from "./Anotaciones";
 
 const MARCO_NORMATIVO_SAN_LUIS = `
@@ -334,11 +335,7 @@ function RespuestaAnalisis({ respuesta, caso, agente }) {
 
   useEffect(() => {
     if (!respuesta) return;
-    if (respuesta.startsWith("http://") || respuesta.startsWith("https://")) {
-      fetch(respuesta).then(r => r.text()).then(setTexto).catch(() => setTexto(respuesta));
-    } else {
-      setTexto(respuesta);
-    }
+    resolverTextoRef(respuesta).then(setTexto).catch(() => setTexto(respuesta));
   }, [respuesta]);
 
   useEffect(() => {
@@ -495,19 +492,11 @@ export default function AgenteIA({ caso, documentos }) {
     setAgentesSeleccionados(accion.agentes);
   };
 
-  // Si contenido_texto es una URL (texto largo subido como archivo), hace fetch del contenido real
+  // Si contenido_texto es una referencia a archivo privado o URL, resuelve el contenido real
   const resolverContenido = async (doc) => {
     const texto = doc.contenido_texto;
     if (!texto) return "(Sin texto)";
-    if (texto.startsWith("http://") || texto.startsWith("https://")) {
-      try {
-        const res = await fetch(texto);
-        return await res.text();
-      } catch {
-        return texto;
-      }
-    }
-    return texto;
+    return await resolverTextoRef(texto);
   };
 
   const ejecutarConsulta = async (consultaTexto, agentesIds) => {
@@ -547,12 +536,7 @@ export default function AgenteIA({ caso, documentos }) {
         model: "claude_sonnet_4_6",
       });
       // Si la respuesta es muy larga, subirla como archivo y guardar la URL
-      if (respuesta && respuesta.length > 8000) {
-        const blob = new Blob([respuesta], { type: "text/plain" });
-        const txtFile = new File([blob], `analisis_${Date.now()}.txt`, { type: "text/plain" });
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-        respuesta = file_url;
-      }
+      respuesta = await subirTextoLargo(respuesta, `analisis_${Date.now()}`);
       await base44.entities.CasoAnalisis.create({
         caso_id: caso.id,
         agente: agenteId,
@@ -611,8 +595,8 @@ export default function AgenteIA({ caso, documentos }) {
               const analisisConTexto = await Promise.all(
                 analisis.map(async a => {
                   let texto = a.respuesta || "";
-                  if (texto.startsWith("http://") || texto.startsWith("https://")) {
-                    try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                  if (texto.startsWith("http://") || texto.startsWith("https://") || texto.startsWith("priv:")) {
+                    texto = await resolverTextoRef(texto);
                   }
                   const ag = agentes.find(ag => ag.id === a.agente);
                   return `[${ag?.label || a.agente}] ${a.consulta}:\n${texto}`;
@@ -640,12 +624,7 @@ ${analisisTexto}`;
                 prompt: agenteConfig.prompt(consultaResumen, docsTexto),
                 model: "claude_sonnet_4_6",
               });
-              if (respuesta && respuesta.length > 8000) {
-                const blob = new Blob([respuesta], { type: "text/plain" });
-                const txtFile = new File([blob], `resumen_${Date.now()}.txt`, { type: "text/plain" });
-                const { file_url } = await base44.integrations.Core.UploadFile({ file: txtFile });
-                respuesta = file_url;
-              }
+              respuesta = await subirTextoLargo(respuesta, `resumen_${Date.now()}`);
               await base44.entities.CasoAnalisis.create({
                 caso_id: caso.id,
                 agente: "lector_juridico",
@@ -839,8 +818,8 @@ ${analisisTexto}`;
                       const analisisConTexto = await Promise.all(
                         analisisAExportar.map(async (a) => {
                           let texto = a.respuesta || "";
-                          if (texto.startsWith("http://") || texto.startsWith("https://")) {
-                            try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                          if (texto.startsWith("http://") || texto.startsWith("https://") || texto.startsWith("priv:")) {
+                            texto = await resolverTextoRef(texto);
                           }
                           return { ...a, textoResuelto: texto };
                         })
@@ -936,8 +915,8 @@ ${analisisTexto}`;
                       const analisisConTexto = await Promise.all(
                         analisisAImprimir.map(async (a) => {
                           let texto = a.respuesta || "";
-                          if (texto.startsWith("http://") || texto.startsWith("https://")) {
-                            try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                          if (texto.startsWith("http://") || texto.startsWith("https://") || texto.startsWith("priv:")) {
+                            texto = await resolverTextoRef(texto);
                           }
                           return { ...a, textoResuelto: texto };
                         })
@@ -1047,8 +1026,8 @@ ${analisisTexto}`;
                           title="Imprimir análisis"
                           onClick={async () => {
                             let texto = a.respuesta || "";
-                            if (texto.startsWith("http://") || texto.startsWith("https://")) {
-                              try { texto = await fetch(texto).then(r => r.text()); } catch {}
+                            if (texto.startsWith("http://") || texto.startsWith("https://") || texto.startsWith("priv:")) {
+                              texto = await resolverTextoRef(texto);
                             }
                             const hoy = new Date().toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
                             const w = window.open("", "_blank");

@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { subirArchivoPrivado, urlFirmada, useUrlsFirmadas } from "@/lib/privateFiles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export default function Legajos() {
   const [showClientDrop, setShowClientDrop] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [previewFirmada, setPreviewFirmada] = useState(null);
   const fileRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -71,6 +73,8 @@ export default function Legajos() {
     queryKey: ["clients"],
     queryFn: () => base44.entities.Client.list("full_name"),
   });
+
+  const urls = useUrlsFirmadas(legajos.map(l => l.file_url));
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Legajo.create(data),
@@ -95,8 +99,9 @@ export default function Legajos() {
   const handleFileUpload = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(prev => ({ ...prev, file_url }));
+    const uri = await subirArchivoPrivado(file);
+    setForm(prev => ({ ...prev, file_url: uri }));
+    setPreviewFirmada(await urlFirmada(uri));
     setUploading(false);
   };
 
@@ -214,11 +219,11 @@ export default function Legajos() {
                     {/* Imagen */}
                     <div
                       className="aspect-[3/4] bg-muted/40 cursor-pointer overflow-hidden"
-                      onClick={() => setPreviewUrl(doc.file_url)}
+                      onClick={() => setPreviewUrl(urls[doc.file_url] || doc.file_url)}
                     >
                       {doc.file_url ? (
                         <img
-                          src={doc.file_url}
+                          src={urls[doc.file_url] || doc.file_url}
                           alt={doc.titulo}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                         />
@@ -231,7 +236,7 @@ export default function Legajos() {
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                         <button
                           className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow"
-                          onClick={(e) => { e.stopPropagation(); setPreviewUrl(doc.file_url); }}
+                          onClick={(e) => { e.stopPropagation(); setPreviewUrl(urls[doc.file_url] || doc.file_url); }}
                         >
                           <Eye className="w-4 h-4 text-primary" />
                         </button>
@@ -385,10 +390,10 @@ export default function Legajos() {
                 </div>
               ) : (
                 <div className="relative rounded-xl overflow-hidden border">
-                  <img src={form.file_url} alt="Vista previa" className="w-full max-h-48 object-contain bg-muted/20" />
+                  <img src={previewFirmada} alt="Vista previa" className="w-full max-h-48 object-contain bg-muted/20" />
                   <button
                     className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white"
-                    onClick={() => setForm({ ...form, file_url: "" })}
+                    onClick={() => { setPreviewFirmada(null); setForm({ ...form, file_url: "" }); }}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

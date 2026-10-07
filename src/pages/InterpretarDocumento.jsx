@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { invokeLLM } from "@/lib/llm";
+import { subirArchivoPrivado, urlFirmada } from "@/lib/privateFiles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -110,11 +111,12 @@ export default function InterpretarDocumento() {
     setLoading(true);
     setLoadingStep("Subiendo archivo...");
 
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const uri = await subirArchivoPrivado(file);
+    const urlFirm = await urlFirmada(uri);
 
     setLoadingStep("Extrayendo texto del documento...");
     const extraction = await base44.integrations.Core.ExtractDataFromUploadedFile({
-      file_url,
+      file_url: urlFirm,
       json_schema: {
         type: "object",
         properties: {

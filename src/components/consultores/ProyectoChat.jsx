@@ -8,15 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { Send, Loader2, MessagesSquare } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { resolverTextoRef as resolverTexto } from "@/lib/privateFiles";
 
-// Si contenido_texto quedó guardado como URL (texto largo), resuelve el contenido real
-async function resolverTexto(t) {
-  if (!t) return "";
-  if (t.startsWith("http://") || t.startsWith("https://")) {
-    try { return await fetch(t).then(r => r.text()); } catch { return t; }
-  }
-  return t;
-}
+
 
 export default function ProyectoChat({ consultor, proyecto, documentos }) {
   const [input, setInput] = useState("");

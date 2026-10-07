@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { subirArchivoPrivado, urlFirmada } from "@/lib/privateFiles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Send, Mic, MicOff, X } from "lucide-react";
@@ -80,8 +81,9 @@ export default function IusAgentChat({ onClose }) {
         const file = new File([blob], "audio.webm", { type: "audio/webm" });
         
         try {
-          const { file_url } = await base44.integrations.Core.UploadFile({ file });
-          const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
+          const uri = await subirArchivoPrivado(file);
+          const url = await urlFirmada(uri);
+          const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: url });
           
           if (transcript) {
             setInput(transcript);

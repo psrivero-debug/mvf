@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Square, Upload, Loader2, Wand2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { subirArchivoPrivado, urlFirmada } from "@/lib/privateFiles";
 
 export default function AudioTranscriber({ onTranscript }) {
   const [isRecording, setIsRecording] = useState(false);
@@ -71,8 +72,9 @@ export default function AudioTranscriber({ onTranscript }) {
     if (!file) return;
     setIsProcessing(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const result = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
+      const uri = await subirArchivoPrivado(file);
+      const url = await urlFirmada(uri);
+      const result = await base44.integrations.Core.TranscribeAudio({ audio_url: url });
       onTranscript(result);
     } finally {
       setIsProcessing(false);
